@@ -76,8 +76,9 @@ fn demo_root() -> impl Scene {
                     // flex_grow: 1.0,
                 }
                 AccessibleLabel("Quit")
-                on(|_activate: On<Activate>| {
+                on(|_activate: On<Activate>, mut commands: Commands| {
                     info!("Quit button clicked!");
+                    commands.write_message(AppExit::Success);
                 })
             ),
             ]
