@@ -4,10 +4,11 @@
 
 use bevy::{
     feathers::{
+        FeathersPlugins,
         controls::*,
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
-        tokens, FeathersPlugins,
+        tokens,
     },
     input_focus::tab_navigation::TabGroup,
     // input_focus::AutoFocus,
@@ -25,7 +26,7 @@ fn main() {
 }
 
 fn scene() -> impl SceneList {
-    bsn_list![Camera2d, demo_root()]
+    bsn_list![Camera2d, main_menu()]
 }
 
 fn button(name: &'static str) -> impl Scene {
@@ -41,7 +42,7 @@ fn button(name: &'static str) -> impl Scene {
     }
 }
 
-fn demo_root() -> impl Scene {
+fn main_menu() -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
