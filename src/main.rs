@@ -21,12 +21,13 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, FeathersPlugins))
         .insert_resource(UiTheme(create_dark_theme()))
-        .add_systems(Startup, scene.spawn())
+        .add_systems(Startup, camera_scene.spawn())
+        .add_systems(Startup, main_menu.spawn())
         .run();
 }
 
-fn scene() -> impl SceneList {
-    bsn_list![Camera2d, main_menu()]
+fn camera_scene() -> impl SceneList {
+    bsn! { Camera2d }
 }
 
 fn button(name: &'static str) -> impl Scene {
