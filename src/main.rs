@@ -17,12 +17,20 @@ use bevy::{
     ui_widgets::Activate,
 };
 
+#[derive(States, Default, Debug, Hash, Eq, PartialEq, Clone)]
+enum GameState {
+    #[default]
+    MainMenu,
+    InGame,
+}
+
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, FeathersPlugins))
         .insert_resource(UiTheme(create_dark_theme()))
+        .init_state::<GameState>()
         .add_systems(Startup, camera_scene.spawn())
-        .add_systems(Startup, main_menu.spawn())
+        .add_systems(OnEnter(GameState::MainMenu), main_menu.spawn())
         .run();
 }
 
@@ -66,6 +74,9 @@ fn main_menu() -> impl Scene {
             (
                 button("Start")
                 // AutoFocus // not using autofocus so that this is the first selected button when tabbing
+                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+                    next_state.set(GameState::InGame);
+                })
             ),
             (
                 button("Settings")
