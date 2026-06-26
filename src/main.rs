@@ -32,6 +32,7 @@ fn main() {
         .add_systems(Update, log_state_change)
         .add_systems(Startup, camera_scene.spawn())
         .add_systems(OnEnter(GameState::MainMenu), main_menu.spawn())
+        .add_systems(OnExit(GameState::MainMenu), despawn_ui)
         .run();
 }
 
@@ -97,4 +98,8 @@ fn main_menu() -> impl Scene {
             ),
         ]
     }
+}
+
+fn despawn_ui(mut commands: Commands, root_node: Single<Entity, (With<Node>, Without<ChildOf>)>) {
+    commands.entity(*root_node).despawn();
 }
