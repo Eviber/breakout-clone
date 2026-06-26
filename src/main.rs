@@ -9,8 +9,10 @@ use bevy::{
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
         tokens, FeathersPlugins,
     },
-    input_focus::{tab_navigation::TabGroup, AutoFocus },
+    input_focus::tab_navigation::TabGroup,
+    // input_focus::AutoFocus,
     prelude::*,
+    ui::InteractionDisabled,
     ui_widgets::Activate,
 };
 
@@ -31,14 +33,17 @@ fn demo_root() -> impl Scene {
         Node {
             width: percent(100),
             height: percent(100),
-            align_items: AlignItems::Center,
-            // align_items: AlignItems::Stretch,
+            align_items: AlignItems::Stretch,
             justify_content: JustifyContent::Center,
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
-            column_gap: px(8),
-            row_gap: px(8),
-            padding: percent(10),
+            row_gap: percent(10),
+            padding: UiRect {
+                left: percent(30),
+                right: percent(30),
+                top: percent(20),
+                bottom: percent(20),
+            },
         }
         TabGroup
         ThemeBackgroundColor(tokens::WINDOW_BG)
@@ -47,10 +52,8 @@ fn demo_root() -> impl Scene {
                 @FeathersButton {
                     @caption: bsn! { Text("Start") ThemedText },
                 }
-                AutoFocus
-                Node {
-                    // flex_grow: 1.0,
-                }
+                // AutoFocus // not using autofocus so that this is the first selected button when tabbing
+                Node { flex_grow: 1.0, }
                 AccessibleLabel("Start")
                 on(|_activate: On<Activate>| {
                     info!("Start button clicked!");
@@ -60,10 +63,9 @@ fn demo_root() -> impl Scene {
                 @FeathersButton {
                     @caption: bsn! { Text("Settings") ThemedText },
                 }
-                Node {
-                    // flex_grow: 1.0,
-                }
+                Node { flex_grow: 1.0, }
                 AccessibleLabel("Settings")
+                InteractionDisabled
                 on(|_activate: On<Activate>| {
                     info!("Settings button clicked!");
                 })
@@ -72,9 +74,7 @@ fn demo_root() -> impl Scene {
                 @FeathersButton {
                     @caption: bsn! { Text("Quit") ThemedText },
                 }
-                Node {
-                    // flex_grow: 1.0,
-                }
+                Node { flex_grow: 1.0, }
                 AccessibleLabel("Quit")
                 on(|_activate: On<Activate>, mut commands: Commands| {
                     info!("Quit button clicked!");
