@@ -28,6 +28,19 @@ fn scene() -> impl SceneList {
     bsn_list![Camera2d, demo_root()]
 }
 
+fn button(name: &'static str) -> impl Scene {
+    bsn! {
+        @FeathersButton {
+            @caption: bsn! { Text(name) ThemedText },
+        }
+        Node { flex_grow: 1.0, }
+        AccessibleLabel(name)
+        on(move |_activate: On<Activate>| {
+            info!("{name} button clicked!");
+        })
+    }
+}
+
 fn demo_root() -> impl Scene {
     bsn! {
         Node {
@@ -49,38 +62,19 @@ fn demo_root() -> impl Scene {
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
             (
-                @FeathersButton {
-                    @caption: bsn! { Text("Start") ThemedText },
-                }
+                button("Start")
                 // AutoFocus // not using autofocus so that this is the first selected button when tabbing
-                Node { flex_grow: 1.0, }
-                AccessibleLabel("Start")
-                on(|_activate: On<Activate>| {
-                    info!("Start button clicked!");
-                })
             ),
             (
-                @FeathersButton {
-                    @caption: bsn! { Text("Settings") ThemedText },
-                }
-                Node { flex_grow: 1.0, }
-                AccessibleLabel("Settings")
+                button("Settings")
                 InteractionDisabled
-                on(|_activate: On<Activate>| {
-                    info!("Settings button clicked!");
-                })
             ),
             (
-                @FeathersButton {
-                    @caption: bsn! { Text("Quit") ThemedText },
-                }
-                Node { flex_grow: 1.0, }
-                AccessibleLabel("Quit")
+                button("Quit")
                 on(|_activate: On<Activate>, mut commands: Commands| {
-                    info!("Quit button clicked!");
                     commands.write_message(AppExit::Success);
                 })
             ),
-            ]
+        ]
     }
 }
