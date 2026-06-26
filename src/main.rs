@@ -29,9 +29,16 @@ fn main() {
         .add_plugins((DefaultPlugins, FeathersPlugins))
         .insert_resource(UiTheme(create_dark_theme()))
         .init_state::<GameState>()
+        .add_systems(Update, log_state_change)
         .add_systems(Startup, camera_scene.spawn())
         .add_systems(OnEnter(GameState::MainMenu), main_menu.spawn())
         .run();
+}
+
+fn log_state_change(state: Res<State<GameState>>) {
+    if state.is_changed() {
+        info!("Switched to state {:?}", **state);
+    }
 }
 
 fn camera_scene() -> impl SceneList {
