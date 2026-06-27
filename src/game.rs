@@ -1,0 +1,35 @@
+use bevy::prelude::*;
+
+use crate::GameState;
+use crate::despawn_ui;
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(GameState::InGame), game_ui.spawn())
+        .add_systems(OnExit(GameState::InGame), despawn_ui)
+        .add_systems(Update, handle_input);
+}
+
+fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+    // TODO: Pause Menu
+    if input.just_pressed(KeyCode::Escape) {
+        next_state.set(GameState::MainMenu);
+    }
+}
+
+fn game_ui() -> impl Scene {
+    bsn! {
+        Node {
+            width: percent(100),
+            height: percent(100),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+        }
+        Children [
+            (
+                Text::new("In construction\nPress escape to quit to main menu.")
+                // TextColor(Color::BLACK)
+                TextLayout::justify(Justify::Center)
+            )
+        ]
+    }
+}
