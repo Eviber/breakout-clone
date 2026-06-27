@@ -20,15 +20,8 @@ fn main() {
         .add_plugins(main_menu::plugin)
         .add_plugins(game_wrapper::plugin)
         .init_state::<GameState>()
-        .add_systems(Update, log_state_change)
         .add_systems(Startup, camera_scene.spawn())
         .run();
-}
-
-fn log_state_change(state: Res<State<GameState>>) {
-    if state.is_changed() {
-        info!("Switched to state {:?}", **state);
-    }
 }
 
 fn despawn_ui(mut commands: Commands, root_node: Single<Entity, (With<Node>, Without<ChildOf>)>) {
