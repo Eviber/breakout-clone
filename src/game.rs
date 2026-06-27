@@ -2,19 +2,19 @@ mod game_pause;
 
 use bevy::prelude::*;
 
-use crate::GameState;
 use crate::despawn_ui;
+use game_pause::IsPaused;
 
 pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
-        .add_systems(OnEnter(GameState::InGame), game_ui.spawn())
-        .add_systems(OnExit(GameState::InGame), despawn_ui)
-        .add_systems(Update, handle_input.run_if(in_state(GameState::InGame)));
+        .add_systems(OnEnter(IsPaused::Running), game_ui.spawn())
+        .add_systems(OnExit(IsPaused::Running), despawn_ui)
+        .add_systems(Update, handle_input.run_if(in_state(IsPaused::Running)));
 }
 
-fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<IsPaused>>) {
     if input.just_pressed(KeyCode::Escape) {
-        next_state.set(GameState::Paused);
+        next_state.set(IsPaused::Paused);
     }
 }
 

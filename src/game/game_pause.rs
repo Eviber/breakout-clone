@@ -11,15 +11,24 @@ use bevy::{
 
 use crate::{GameState, despawn_ui};
 
-pub fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Paused), pause_ui.spawn())
-        .add_systems(OnExit(GameState::Paused), despawn_ui)
-        .add_systems(Update, handle_input.run_if(in_state(GameState::Paused)));
+#[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
+#[source(GameState = GameState::InGame)]
+pub enum IsPaused {
+    #[default]
+    Running,
+    Paused,
 }
 
-fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+pub fn plugin(app: &mut App) {
+    app.add_sub_state::<IsPaused>()
+        .add_systems(OnEnter(IsPaused::Paused), pause_ui.spawn())
+        .add_systems(OnExit(IsPaused::Paused), despawn_ui)
+        .add_systems(Update, handle_input.run_if(in_state(IsPaused::Paused)));
+}
+
+fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<IsPaused>>) {
     if input.just_pressed(KeyCode::Escape) {
-        next_state.set(GameState::InGame);
+        next_state.set(IsPaused::Running);
     }
 }
 
@@ -46,8 +55,8 @@ fn pause_ui() -> impl Scene {
         Children [
             (
                 button("Resume")
-                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                    next_state.set(GameState::InGame);
+                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<IsPaused>>| {
+                    next_state.set(IsPaused::Running);
                 })
             ),
             (

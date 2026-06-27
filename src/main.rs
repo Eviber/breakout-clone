@@ -8,11 +8,10 @@ mod main_menu;
 use bevy::{feathers::FeathersPlugins, prelude::*};
 
 #[derive(States, Default, Debug, Hash, Eq, PartialEq, Clone)]
-enum GameState {
+pub enum GameState {
     #[default]
     MainMenu,
     InGame,
-    Paused,
 }
 
 fn main() {
