@@ -8,19 +8,24 @@ use crate::GameState;
 #[require(Transform)]
 struct Position(Vec2);
 
+#[derive(Component, Clone, Default)]
+struct Velocity(Vec2);
+
 #[derive(SceneComponent, Clone, Default)]
 struct Ball;
 
 const BALL_SIZE: f32 = 10.;
 const BALL_SHAPE: Circle = Circle::new(BALL_SIZE);
 const BALL_COLOR: Color = Color::srgb(1., 0., 0.);
+const BALL_SPEED: f32 = 2.;
 
 impl Ball {
     fn scene() -> impl Scene {
         let x = 0.;
-        let y = -250.;
+        let y = -200.;
         bsn! {
-            Position(vec2(x,y))
+            Position(vec2(x, y))
+            Velocity(vec2(0., -BALL_SPEED))
             Mesh2d(asset_value(BALL_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
             DespawnOnExit<GameState>(GameState::InGame)
@@ -48,7 +53,8 @@ impl Paddle {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(GameState::InGame), entities.spawn())
+    // HACK: Project position on entering state, to make them visible sooner
+    app.add_systems(OnEnter(GameState::InGame), (entities.spawn(), project_positions).chain())
         .add_systems(
             FixedUpdate,
             (move_ball, project_positions)
@@ -57,8 +63,9 @@ pub fn plugin(app: &mut App) {
         );
 }
 
-fn move_ball(mut position: Single<&mut Position, With<Ball>>) {
-    position.0.y -= 1.0;
+fn move_ball(ball: Single<(&mut Position, &Velocity), With<Ball>>) {
+    let (mut position, velocity) = ball.into_inner();
+    position.0 += velocity.0 * BALL_SPEED;
 }
 
 fn entities() -> impl SceneList {
