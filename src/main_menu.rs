@@ -51,8 +51,8 @@ fn main_menu() -> impl Scene {
             },
         }
         TabGroup
-            ThemeBackgroundColor(tokens::WINDOW_BG)
-            Children [
+        ThemeBackgroundColor(tokens::WINDOW_BG)
+        Children [
             (
                 button("Start")
                 // AutoFocus // not using autofocus so that this is the first selected button when tabbing
@@ -70,7 +70,7 @@ fn main_menu() -> impl Scene {
                     commands.write_message(AppExit::Success);
                 })
             ),
-            ]
+        ]
     }
 }
 
