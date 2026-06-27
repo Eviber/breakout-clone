@@ -12,7 +12,8 @@ use bevy::{
     ui_widgets::Activate,
 };
 
-use super::GameState;
+use crate::GameState;
+use crate::despawn_ui;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(UiTheme(create_dark_theme()))
@@ -72,8 +73,4 @@ fn main_menu() -> impl Scene {
             ),
         ]
     }
-}
-
-fn despawn_ui(mut commands: Commands, root_node: Single<Entity, (With<Node>, Without<ChildOf>)>) {
-    commands.entity(*root_node).despawn();
 }

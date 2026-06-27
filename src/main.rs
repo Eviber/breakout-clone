@@ -29,6 +29,10 @@ fn log_state_change(state: Res<State<GameState>>) {
     }
 }
 
+fn despawn_ui(mut commands: Commands, root_node: Single<Entity, (With<Node>, Without<ChildOf>)>) {
+    commands.entity(*root_node).despawn();
+}
+
 fn camera_scene() -> impl SceneList {
     bsn! { Camera2d }
 }
