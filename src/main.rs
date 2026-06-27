@@ -12,6 +12,7 @@ enum GameState {
     #[default]
     MainMenu,
     InGame,
+    Paused,
 }
 
 fn main() {
