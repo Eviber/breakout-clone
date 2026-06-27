@@ -2,7 +2,7 @@
 
 #![allow(clippy::too_many_arguments)]
 
-mod game;
+mod game_wrapper;
 mod main_menu;
 
 use bevy::{feathers::FeathersPlugins, prelude::*};
@@ -18,7 +18,7 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, FeathersPlugins))
         .add_plugins(main_menu::plugin)
-        .add_plugins(game::plugin)
+        .add_plugins(game_wrapper::plugin)
         .init_state::<GameState>()
         .add_systems(Update, log_state_change)
         .add_systems(Startup, camera_scene.spawn())
