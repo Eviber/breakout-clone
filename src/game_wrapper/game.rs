@@ -28,6 +28,25 @@ impl Ball {
     }
 }
 
+#[derive(SceneComponent, Clone, Default)]
+struct Paddle;
+
+const PADDLE_SHAPE: Rectangle = Rectangle::new(50., 10.);
+const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
+
+impl Paddle {
+    fn scene() -> impl Scene {
+        let x = 0.;
+        let y = -350.;
+        bsn! {
+            Position(vec2(x,y))
+            Mesh2d(asset_value(PADDLE_SHAPE))
+            MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
+            DespawnOnExit<GameState>(GameState::InGame)
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::InGame), entities.spawn())
         .add_systems(
@@ -45,6 +64,7 @@ fn move_ball(mut position: Single<&mut Position, With<Ball>>) {
 fn entities() -> impl SceneList {
     bsn_list! [
         @Ball,
+        @Paddle,
     ]
 }
 
