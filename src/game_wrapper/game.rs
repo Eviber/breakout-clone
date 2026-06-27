@@ -1,3 +1,4 @@
+use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::prelude::*;
 
 use super::IsPaused;
@@ -10,6 +11,15 @@ struct Position(Vec2);
 
 #[derive(Component, Clone, Default)]
 struct Velocity(Vec2);
+
+#[derive(Component, Clone, Default)]
+struct Collider(Rectangle);
+
+impl Collider {
+    fn half_size(&self) -> Vec2 {
+        self.0.half_size
+    }
+}
 
 #[derive(SceneComponent, Clone, Default)]
 struct Ball;
@@ -26,6 +36,7 @@ impl Ball {
         bsn! {
             Position(vec2(x, y))
             Velocity(vec2(0., -BALL_SPEED))
+            Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
             Mesh2d(asset_value(BALL_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
             DespawnOnExit<GameState>(GameState::InGame)
@@ -45,6 +56,7 @@ impl Paddle {
         let y = -350.;
         bsn! {
             Position(vec2(x,y))
+            Collider(PADDLE_SHAPE)
             Mesh2d(asset_value(PADDLE_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
             DespawnOnExit<GameState>(GameState::InGame)
@@ -52,15 +64,78 @@ impl Paddle {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+enum Collision {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
 pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
-    app.add_systems(OnEnter(GameState::InGame), (entities.spawn(), project_positions).chain())
-        .add_systems(
-            FixedUpdate,
-            (move_ball, project_positions)
-                .chain()
-                .run_if(in_state(IsPaused::Running)),
-        );
+    app.add_systems(
+        OnEnter(GameState::InGame),
+        (entities.spawn(), project_positions).chain(),
+    )
+    .add_systems(
+        FixedUpdate,
+        (
+            project_positions,
+            move_ball.before(project_positions),
+            handle_collisions.after(move_ball),
+        )
+            .run_if(in_state(IsPaused::Running)),
+    );
+}
+
+// Returns `Some` if `ball` collides with `wall`. The returned `Collision` is the
+// side of `wall` that `ball` hit.
+fn collide_with_side(ball: Aabb2d, wall: Aabb2d) -> Option<Collision> {
+    if !ball.intersects(&wall) {
+        return None;
+    }
+
+    let closest_point = wall.closest_point(ball.center());
+    let offset = ball.center() - closest_point;
+
+    let side = if offset.x.abs() > offset.y.abs() {
+        if offset.x < 0. {
+            Collision::Left
+        } else {
+            Collision::Right
+        }
+    } else if offset.y > 0. {
+        Collision::Top
+    } else {
+        Collision::Bottom
+    };
+
+    Some(side)
+}
+
+fn handle_collisions(
+    ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
+    other_things: Query<(&Position, &Collider), Without<Ball>>,
+) {
+    let (mut ball_velocity, ball_position, ball_collider) = ball.into_inner();
+
+    for (other_position, other_collider) in &other_things {
+        let Some(collision) = collide_with_side(
+            Aabb2d::new(ball_position.0, ball_collider.half_size()),
+            Aabb2d::new(other_position.0, other_collider.half_size()),
+        ) else {
+            continue;
+        };
+        match collision {
+            Collision::Left | Collision::Right => {
+                ball_velocity.0.x *= -1.;
+            }
+            Collision::Top | Collision::Bottom => {
+                ball_velocity.0.y *= -1.;
+            }
+        }
+    }
 }
 
 fn move_ball(ball: Single<(&mut Position, &Velocity), With<Ball>>) {
