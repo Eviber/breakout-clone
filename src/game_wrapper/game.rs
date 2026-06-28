@@ -91,11 +91,48 @@ enum Collision {
     Bottom,
 }
 
+#[derive(Component, Clone, Default)]
+#[require(Position, Collider)]
+struct Brick;
+
+const BRICK_COLOR: Color = Color::srgb(1., 1., 1.);
+const BRICK_SHAPE: Rectangle = Rectangle::new(60., 20.);
+
+fn brick(x: f32, y: f32) -> impl Scene {
+    bsn! {
+        Brick
+        Gutter
+        Position(vec2(x, y))
+        Collider(BRICK_SHAPE)
+        Mesh2d(asset_value(BRICK_SHAPE))
+        MeshMaterial2d<ColorMaterial>(asset_value(BRICK_COLOR))
+        DespawnOnExit<GameState>(GameState::InGame)
+    }
+}
+
+fn bricks() -> impl SceneList {
+    bsn_list! [
+        brick(-100., -100.),
+        brick(0.,    -100.),
+        brick(100.,  -100.),
+        brick(-100.,    0.),
+        brick(0.,       0.),
+        brick(100.,     0.),
+        brick(-100.,  100.),
+        brick(0.,     100.),
+        brick(100.,   100.),
+    ]
+}
+
 pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
     app.add_systems(
         OnEnter(GameState::InGame),
-        (spawn_entities, project_positions).chain(),
+        (
+            spawn_entities.before(project_positions),
+            bricks.spawn().before(project_positions),
+            project_positions,
+        ),
     )
     .add_systems(
         FixedUpdate,
@@ -182,12 +219,13 @@ fn constrain_paddle_position(
 }
 
 fn handle_collisions(
+    mut commands: Commands,
     ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
-    other_things: Query<(&Position, &Collider), Without<Ball>>,
+    other_things: Query<(&Position, &Collider, Option<&Brick>, Entity), Without<Ball>>,
 ) {
     let (mut ball_velocity, ball_position, ball_collider) = ball.into_inner();
 
-    for (other_position, other_collider) in &other_things {
+    for (other_position, other_collider, is_brick, entity) in &other_things {
         let Some(collision) = collide_with_side(
             Aabb2d::new(ball_position.0, ball_collider.half_size()),
             Aabb2d::new(other_position.0, other_collider.half_size()),
@@ -201,6 +239,9 @@ fn handle_collisions(
             Collision::Top | Collision::Bottom => {
                 ball_velocity.0.y *= -1.;
             }
+        }
+        if is_brick.is_some() {
+            commands.entity(entity).despawn();
         }
     }
 }
