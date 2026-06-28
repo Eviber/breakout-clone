@@ -48,14 +48,14 @@ impl Ball {
 #[require(Velocity)]
 struct Paddle;
 
-const PADDLE_SHAPE: Rectangle = Rectangle::new(50., 10.);
+const PADDLE_SHAPE: Rectangle = Rectangle::new(100., 10.);
 const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
 const PADDLE_SPEED: f32 = 5.;
 
 impl Paddle {
     fn scene() -> impl Scene {
         let x = 0.;
-        let y = -350.;
+        let y = -300.;
         bsn! {
             Position(vec2(x,y))
             Collider(PADDLE_SHAPE)
@@ -229,7 +229,11 @@ fn handle_collisions(
             continue;
         };
         if is_paddle {
-            let dir = (ball_position.0 - other_position.0).normalize();
+            let paddle_pos = Vec2 {
+                x: other_position.0.x,
+                y: other_position.0.y + other_collider.half_size().y - other_collider.half_size().x,
+            };
+            let dir = (ball_position.0 - paddle_pos).normalize();
             ball_velocity.0 = dir * BALL_SPEED;
             continue;
         }
