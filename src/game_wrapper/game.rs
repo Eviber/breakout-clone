@@ -28,14 +28,14 @@ const BALL_SIZE: f32 = 10.;
 const BALL_SHAPE: Circle = Circle::new(BALL_SIZE);
 const BALL_COLOR: Color = Color::srgb(1., 0., 0.);
 const BALL_SPEED: f32 = 2.;
+const BALL_BASE_POS: Vec2 = vec2(0., -200.);
+const BALL_BASE_VELOCITY: Vec2 = vec2(0., BALL_SPEED);
 
 impl Ball {
     fn scene() -> impl Scene {
-        let x = 0.;
-        let y = -200.;
         bsn! {
-            Position(vec2(x, y))
-            Velocity(vec2(0., -BALL_SPEED))
+            Position(BALL_BASE_POS)
+            Velocity(BALL_BASE_VELOCITY)
             Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
             Mesh2d(asset_value(BALL_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
@@ -139,6 +139,7 @@ pub fn plugin(app: &mut App) {
             handle_player_input.before(move_paddle),
             move_paddle.before(project_positions),
             constrain_paddle_position.after(move_paddle),
+            handle_lost_ball,
         )
             .run_if(in_state(IsPaused::Running)),
     );
@@ -211,6 +212,17 @@ fn constrain_paddle_position(
                 _ => {}
             }
         }
+    }
+}
+
+fn handle_lost_ball(
+    ball: Single<(&mut Velocity, &mut Position), With<Ball>>,
+    paddle_pos: Single<&Position, (With<Paddle>, Without<Ball>)>,
+) {
+    let (mut ball_velocity, mut ball_position) = ball.into_inner();
+    if ball_position.0.y < paddle_pos.0.y - 100. {
+        ball_position.0 = BALL_BASE_POS;
+        ball_velocity.0 = BALL_BASE_VELOCITY;
     }
 }
 
