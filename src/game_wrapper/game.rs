@@ -110,18 +110,14 @@ fn brick(x: f32, y: f32) -> impl Scene {
     }
 }
 
-fn bricks() -> impl SceneList {
-    bsn_list! [
-        brick(-100., -100.),
-        brick(0.,    -100.),
-        brick(100.,  -100.),
-        brick(-100.,    0.),
-        brick(0.,       0.),
-        brick(100.,     0.),
-        brick(-100.,  100.),
-        brick(0.,     100.),
-        brick(100.,   100.),
-    ]
+fn spawn_bricks(mut commands: Commands) {
+    for line in 0..3 {
+        for col in 0..10 {
+            let x = (col * 100 - 500) as f32;
+            let y = (line * 50 + 200) as f32;
+            commands.spawn_scene(brick(x, y));
+        }
+    }
 }
 
 pub fn plugin(app: &mut App) {
@@ -130,7 +126,7 @@ pub fn plugin(app: &mut App) {
         OnEnter(GameState::InGame),
         (
             spawn_entities.before(project_positions),
-            bricks.spawn().before(project_positions),
+            spawn_bricks.before(project_positions),
             project_positions,
         ),
     )
