@@ -64,6 +64,23 @@ impl Paddle {
     }
 }
 
+#[derive(Component, Clone, Default)]
+struct Gutter;
+
+const GUTTER_COLOR: Color = Color::srgb(0., 0., 1.);
+const GUTTER_WIDTH: f32 = 20.;
+
+fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
+    bsn! {
+        Gutter
+        Position(vec2(x, y))
+        Collider(shape)
+        Mesh2d(asset_value(shape))
+        MeshMaterial2d<ColorMaterial>(asset_value(GUTTER_COLOR))
+        DespawnOnExit<GameState>(GameState::InGame)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 enum Collision {
     Left,
@@ -76,7 +93,7 @@ pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
     app.add_systems(
         OnEnter(GameState::InGame),
-        (entities.spawn(), project_positions).chain(),
+        (spawn_entities, project_positions).chain(),
     )
     .add_systems(
         FixedUpdate,
@@ -143,11 +160,19 @@ fn move_ball(ball: Single<(&mut Position, &Velocity), With<Ball>>) {
     position.0 += velocity.0 * BALL_SPEED;
 }
 
-fn entities() -> impl SceneList {
-    bsn_list! [
+fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
+    let half_width = window.resolution.width() / 2.;
+    let half_height = window.resolution.height() / 2.;
+    let shape_v = Rectangle::new(GUTTER_WIDTH, window.resolution.height());
+    let shape_h = Rectangle::new(window.resolution.width(), GUTTER_WIDTH);
+
+    commands.spawn_scene_list(bsn_list! [
         @Ball,
         @Paddle,
-    ]
+        gutter(half_width, 0., shape_v),
+        gutter(-half_width, 0., shape_v),
+        gutter(0., half_height, shape_h),
+    ]);
 }
 
 fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
