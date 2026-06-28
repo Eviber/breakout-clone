@@ -45,10 +45,12 @@ impl Ball {
 }
 
 #[derive(SceneComponent, Clone, Default)]
+#[require(Velocity)]
 struct Paddle;
 
 const PADDLE_SHAPE: Rectangle = Rectangle::new(50., 10.);
 const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
+const PADDLE_SPEED: f32 = 5.;
 
 impl Paddle {
     fn scene() -> impl Scene {
@@ -101,9 +103,31 @@ pub fn plugin(app: &mut App) {
             project_positions,
             move_ball.before(project_positions),
             handle_collisions.after(move_ball),
+            handle_player_input.before(move_paddle),
+            move_paddle.before(project_positions),
         )
             .run_if(in_state(IsPaused::Running)),
     );
+}
+
+fn handle_player_input(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
+) {
+    if keyboard_input.pressed(KeyCode::ArrowLeft) {
+        paddle_velocity.0.x = -PADDLE_SPEED;
+    } else if keyboard_input.pressed(KeyCode::ArrowRight) {
+        paddle_velocity.0.x = PADDLE_SPEED;
+    } else {
+        paddle_velocity.0.x = 0.;
+    }
+}
+
+fn move_paddle(
+    paddle: Single<(&mut Position, &Velocity), With<Paddle>>
+) {
+    let (mut position, velocity) = paddle.into_inner();
+    position.0 += velocity.0;
 }
 
 // Returns `Some` if `ball` collides with `wall`. The returned `Collision` is the
