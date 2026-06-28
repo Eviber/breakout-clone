@@ -221,17 +221,22 @@ fn constrain_paddle_position(
 fn handle_collisions(
     mut commands: Commands,
     ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
-    other_things: Query<(&Position, &Collider, Option<&Brick>, Entity), Without<Ball>>,
+    other_things: Query<(&Position, &Collider, Has<Paddle>, Has<Brick>, Entity), Without<Ball>>,
 ) {
     let (mut ball_velocity, ball_position, ball_collider) = ball.into_inner();
 
-    for (other_position, other_collider, is_brick, entity) in &other_things {
+    for (other_position, other_collider, is_paddle, is_brick, entity) in &other_things {
         let Some(collision) = collide_with_side(
             Aabb2d::new(ball_position.0, ball_collider.half_size()),
             Aabb2d::new(other_position.0, other_collider.half_size()),
         ) else {
             continue;
         };
+        if is_paddle {
+            let dir = (ball_position.0 - other_position.0).normalize();
+            ball_velocity.0 = dir * BALL_SPEED;
+            continue;
+        }
         match collision {
             Collision::Left | Collision::Right => {
                 ball_velocity.0.x *= -1.;
@@ -240,7 +245,7 @@ fn handle_collisions(
                 ball_velocity.0.y *= -1.;
             }
         }
-        if is_brick.is_some() {
+        if is_brick {
             commands.entity(entity).despawn();
         }
     }
