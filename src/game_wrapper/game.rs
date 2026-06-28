@@ -105,6 +105,7 @@ pub fn plugin(app: &mut App) {
             handle_collisions.after(move_ball),
             handle_player_input.before(move_paddle),
             move_paddle.before(project_positions),
+            constrain_paddle_position.after(move_paddle),
         )
             .run_if(in_state(IsPaused::Running)),
     );
@@ -123,9 +124,7 @@ fn handle_player_input(
     }
 }
 
-fn move_paddle(
-    paddle: Single<(&mut Position, &Velocity), With<Paddle>>
-) {
+fn move_paddle(paddle: Single<(&mut Position, &Velocity), With<Paddle>>) {
     let (mut position, velocity) = paddle.into_inner();
     position.0 += velocity.0;
 }
@@ -153,6 +152,33 @@ fn collide_with_side(ball: Aabb2d, wall: Aabb2d) -> Option<Collision> {
     };
 
     Some(side)
+}
+
+fn constrain_paddle_position(
+    paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>)>,
+    gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>)>,
+) {
+    let (mut paddle_position, paddle_collider) = paddles.into_inner();
+    for (gutter_position, gutter_collider) in &gutters {
+        let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
+        let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
+
+        if let Some(collision) = collide_with_side(paddle_aabb, gutter_aabb) {
+            match collision {
+                Collision::Left => {
+                    paddle_position.0.x = gutter_position.0.x
+                        - gutter_collider.half_size().x
+                        - paddle_collider.half_size().x;
+                }
+                Collision::Right => {
+                    paddle_position.0.x = gutter_position.0.x
+                        + gutter_collider.half_size().x
+                        + paddle_collider.half_size().x;
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn handle_collisions(
