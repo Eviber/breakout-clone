@@ -140,9 +140,14 @@ pub fn plugin(app: &mut App) {
             move_paddle.before(project_positions),
             constrain_paddle_position.after(move_paddle),
             handle_lost_ball,
+            set_win_state.run_if(not(any_with_component::<Brick>)),
         )
             .run_if(in_state(IsPaused::Running)),
     );
+}
+
+fn set_win_state(mut next_state: ResMut<NextState<IsPaused>>) {
+    next_state.set(IsPaused::Paused);
 }
 
 fn handle_player_input(
