@@ -9,16 +9,8 @@ use bevy::{
     ui_widgets::Activate,
 };
 
+use super::GameState;
 use crate::{AppState, despawn_ui};
-
-#[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
-#[source(AppState = AppState::InGame)]
-pub enum GameState {
-    #[default]
-    Running,
-    Paused,
-    GameOver,
-}
 
 pub fn plugin(app: &mut App) {
     app.add_sub_state::<GameState>()

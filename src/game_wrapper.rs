@@ -4,8 +4,17 @@ mod game_pause;
 
 use bevy::prelude::*;
 
+use crate::AppState;
 use crate::despawn_ui;
-pub use game_pause::GameState;
+
+#[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
+#[source(AppState = AppState::InGame)]
+pub enum GameState {
+    #[default]
+    Running,
+    Paused,
+    GameOver,
+}
 
 pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
