@@ -12,13 +12,13 @@ use bevy::{
     ui_widgets::Activate,
 };
 
-use crate::GameState;
+use crate::AppState;
 use crate::despawn_ui;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(UiTheme(create_dark_theme()))
-        .add_systems(OnEnter(GameState::MainMenu), main_menu.spawn())
-        .add_systems(OnExit(GameState::MainMenu), despawn_ui);
+        .add_systems(OnEnter(AppState::MainMenu), main_menu.spawn())
+        .add_systems(OnExit(AppState::MainMenu), despawn_ui);
 }
 
 fn button(name: &'static str) -> impl Scene {
@@ -57,8 +57,8 @@ fn main_menu() -> impl Scene {
             (
                 button("Start")
                 // AutoFocus // not using autofocus so that this is the first selected button when tabbing
-                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                    next_state.set(GameState::InGame);
+                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<AppState>>| {
+                    next_state.set(AppState::InGame);
                 })
             ),
             (

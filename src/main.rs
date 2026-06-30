@@ -9,7 +9,7 @@ mod main_menu;
 use bevy::{feathers::FeathersPlugins, prelude::*};
 
 #[derive(States, Default, Debug, Hash, Eq, PartialEq, Clone)]
-pub enum GameState {
+pub enum AppState {
     #[default]
     MainMenu,
     InGame,
@@ -20,7 +20,7 @@ fn main() {
         .add_plugins((DefaultPlugins, FeathersPlugins))
         .add_plugins(main_menu::plugin)
         .add_plugins(game_wrapper::plugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
         .add_systems(Startup, camera_scene.spawn())
         .run();
 }

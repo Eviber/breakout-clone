@@ -1,9 +1,9 @@
 use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::prelude::*;
 
-use super::IsPaused;
+use super::GameState;
 
-use crate::GameState;
+use crate::AppState;
 
 #[derive(Component, Clone, Default)]
 #[require(Transform)]
@@ -39,7 +39,7 @@ impl Ball {
             Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
             Mesh2d(asset_value(BALL_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
-            DespawnOnExit<GameState>(GameState::InGame)
+            DespawnOnExit<AppState>(AppState::InGame)
         }
     }
 }
@@ -61,7 +61,7 @@ impl Paddle {
             Collider(PADDLE_SHAPE)
             Mesh2d(asset_value(PADDLE_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
-            DespawnOnExit<GameState>(GameState::InGame)
+            DespawnOnExit<AppState>(AppState::InGame)
         }
     }
 }
@@ -79,7 +79,7 @@ fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
         Collider(shape)
         Mesh2d(asset_value(shape))
         MeshMaterial2d<ColorMaterial>(asset_value(GUTTER_COLOR))
-        DespawnOnExit<GameState>(GameState::InGame)
+        DespawnOnExit<AppState>(AppState::InGame)
     }
 }
 
@@ -106,7 +106,7 @@ fn brick(x: f32, y: f32) -> impl Scene {
         Collider(BRICK_SHAPE)
         Mesh2d(asset_value(BRICK_SHAPE))
         MeshMaterial2d<ColorMaterial>(asset_value(BRICK_COLOR))
-        DespawnOnExit<GameState>(GameState::InGame)
+        DespawnOnExit<AppState>(AppState::InGame)
     }
 }
 
@@ -123,7 +123,7 @@ fn spawn_bricks(mut commands: Commands) {
 pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
     app.add_systems(
-        OnEnter(GameState::InGame),
+        OnEnter(AppState::InGame),
         (
             spawn_entities.before(project_positions),
             spawn_bricks.before(project_positions),
@@ -142,12 +142,12 @@ pub fn plugin(app: &mut App) {
             handle_lost_ball,
             set_win_state.run_if(not(any_with_component::<Brick>)),
         )
-            .run_if(in_state(IsPaused::Running)),
+            .run_if(in_state(GameState::Running)),
     );
 }
 
-fn set_win_state(mut next_state: ResMut<NextState<IsPaused>>) {
-    next_state.set(IsPaused::Paused);
+fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::Paused);
 }
 
 fn handle_player_input(

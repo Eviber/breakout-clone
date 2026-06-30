@@ -9,26 +9,26 @@ use bevy::{
     ui_widgets::Activate,
 };
 
-use crate::{GameState, despawn_ui};
+use crate::{AppState, despawn_ui};
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
-#[source(GameState = GameState::InGame)]
-pub enum IsPaused {
+#[source(AppState = AppState::InGame)]
+pub enum GameState {
     #[default]
     Running,
     Paused,
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_sub_state::<IsPaused>()
-        .add_systems(OnEnter(IsPaused::Paused), pause_ui.spawn())
-        .add_systems(OnExit(IsPaused::Paused), despawn_ui)
-        .add_systems(Update, handle_input.run_if(in_state(IsPaused::Paused)));
+    app.add_sub_state::<GameState>()
+        .add_systems(OnEnter(GameState::Paused), pause_ui.spawn())
+        .add_systems(OnExit(GameState::Paused), despawn_ui)
+        .add_systems(Update, handle_input.run_if(in_state(GameState::Paused)));
 }
 
-fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<IsPaused>>) {
+fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
     if input.just_pressed(KeyCode::Escape) {
-        next_state.set(IsPaused::Running);
+        next_state.set(GameState::Running);
     }
 }
 
@@ -55,14 +55,14 @@ fn pause_ui() -> impl Scene {
         Children [
             (
                 button("Resume")
-                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<IsPaused>>| {
-                    next_state.set(IsPaused::Running);
+                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+                    next_state.set(GameState::Running);
                 })
             ),
             (
                 button("Quit to main menu")
-                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                    next_state.set(GameState::MainMenu);
+                on(|_activate: On<Activate>, mut next_state: ResMut<NextState<AppState>>| {
+                    next_state.set(AppState::MainMenu);
                 })
             ),
         ]
