@@ -1,4 +1,5 @@
 mod game;
+mod game_over;
 mod game_pause;
 
 use bevy::prelude::*;
@@ -9,6 +10,7 @@ pub use game_pause::GameState;
 pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
         .add_plugins(game::plugin)
+        .add_plugins(game_over::plugin)
         .add_systems(OnEnter(GameState::Running), game_ui.spawn())
         .add_systems(OnExit(GameState::Running), despawn_ui)
         .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));

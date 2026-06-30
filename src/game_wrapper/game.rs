@@ -147,7 +147,7 @@ pub fn plugin(app: &mut App) {
 }
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::Paused);
+    next_state.set(GameState::GameOver);
 }
 
 fn handle_player_input(
