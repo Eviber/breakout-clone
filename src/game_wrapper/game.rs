@@ -120,6 +120,9 @@ fn spawn_bricks(mut commands: Commands) {
     }
 }
 
+#[derive(Resource)]
+struct Lives(usize);
+
 pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
     app.add_systems(
@@ -128,6 +131,7 @@ pub fn plugin(app: &mut App) {
             spawn_entities.before(project_positions),
             spawn_bricks.before(project_positions),
             project_positions,
+            init_lives,
         ),
     )
     .add_systems(
@@ -141,9 +145,20 @@ pub fn plugin(app: &mut App) {
             constrain_paddle_position.after(move_paddle),
             handle_lost_ball,
             set_win_state.run_if(not(any_with_component::<Brick>)),
+            check_out_of_lives,
         )
             .run_if(in_state(GameState::Running)),
     );
+}
+
+fn init_lives(mut commands: Commands) {
+    commands.insert_resource(Lives(3));
+}
+
+fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<Lives>) {
+    if lives.0 == 0 {
+        next_state.set(GameState::GameOver);
+    }
 }
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
@@ -223,11 +238,13 @@ fn constrain_paddle_position(
 fn handle_lost_ball(
     ball: Single<(&mut Velocity, &mut Position), With<Ball>>,
     paddle_pos: Single<&Position, (With<Paddle>, Without<Ball>)>,
+    mut lives: ResMut<Lives>,
 ) {
     let (mut ball_velocity, mut ball_position) = ball.into_inner();
     if ball_position.0.y < paddle_pos.0.y - 100. {
         ball_position.0 = BALL_BASE_POS;
         ball_velocity.0 = BALL_BASE_VELOCITY;
+        lives.0 -= 1;
     }
 }
 
