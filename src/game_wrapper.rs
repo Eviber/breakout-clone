@@ -16,6 +16,9 @@ pub enum GameState {
     GameOver,
 }
 
+#[derive(Resource)]
+pub struct Lives(usize);
+
 pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
         .add_plugins(game::plugin)

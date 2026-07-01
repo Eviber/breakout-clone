@@ -1,7 +1,7 @@
 use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::prelude::*;
 
-use super::GameState;
+use super::{GameState, Lives};
 
 use crate::AppState;
 
@@ -119,9 +119,6 @@ fn spawn_bricks(mut commands: Commands) {
         }
     }
 }
-
-#[derive(Resource)]
-struct Lives(usize);
 
 pub fn plugin(app: &mut App) {
     // HACK: Project position on entering state, to make them visible sooner
