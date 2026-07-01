@@ -9,7 +9,7 @@ use bevy::{
     ui_widgets::Activate,
 };
 
-use super::GameState;
+use super::{GameState, Lives};
 use crate::{AppState, despawn_ui};
 
 pub fn plugin(app: &mut App) {
@@ -24,7 +24,12 @@ fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextSta
     }
 }
 
-fn spawn_game_over_ui(mut commands: Commands) {
+fn spawn_game_over_ui(mut commands: Commands, lives: Res<Lives>) {
+    let text = if lives.0 > 0 {
+        "GAME OVER\nYOU WIN!"
+    } else {
+        "GAME OVER\nYOU LOSE!"
+    };
     commands.spawn_scene(bsn! {
         Node {
             width: percent(80),
@@ -46,7 +51,7 @@ fn spawn_game_over_ui(mut commands: Commands) {
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
             (
-                Text::new("YOU WIN!\n(or you lose im not really sure)")
+                Text::new(text)
                 TextLayout::justify(Justify::Center)
             ),
             (
