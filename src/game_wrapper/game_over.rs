@@ -13,7 +13,7 @@ use super::GameState;
 use crate::{AppState, despawn_ui};
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(GameState::GameOver), game_over_ui.spawn())
+    app.add_systems(OnEnter(GameState::GameOver), spawn_game_over_ui)
         .add_systems(OnExit(GameState::GameOver), despawn_ui)
         .add_systems(Update, handle_input.run_if(in_state(GameState::GameOver)));
 }
@@ -24,8 +24,8 @@ fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextSta
     }
 }
 
-fn game_over_ui() -> impl Scene {
-    bsn! {
+fn spawn_game_over_ui(mut commands: Commands) {
+    commands.spawn_scene(bsn! {
         Node {
             width: percent(80),
             height: percent(80),
@@ -46,13 +46,17 @@ fn game_over_ui() -> impl Scene {
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
             (
+                Text::new("YOU WIN!\n(or you lose im not really sure)")
+                TextLayout::justify(Justify::Center)
+            ),
+            (
                 button("Quit to main menu")
                 on(|_activate: On<Activate>, mut next_state: ResMut<NextState<AppState>>| {
                     next_state.set(AppState::MainMenu);
                 })
             ),
         ]
-    }
+    });
 }
 
 fn button(name: &'static str) -> impl Scene {
