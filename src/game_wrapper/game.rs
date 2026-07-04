@@ -130,6 +130,7 @@ pub fn plugin(app: &mut App) {
             init_lives,
         ),
     )
+    .add_systems(Update, update_lives_display.run_if(resource_changed::<Lives>))
     .add_systems(
         FixedUpdate,
         (
@@ -155,6 +156,13 @@ fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<L
     if lives.0 == 0 {
         next_state.set(GameState::GameOver);
     }
+}
+
+use super::LivesDisplay;
+
+fn update_lives_display(mut text: Single<&mut Text, With<LivesDisplay>>, lives: Res<Lives>) {
+    info!("Lives updated: {}", lives.0);
+    text.0 = format!("{} lives", lives.0);
 }
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
