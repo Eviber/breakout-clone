@@ -10,12 +10,11 @@ use bevy::{
 };
 
 use super::GameState;
-use crate::{AppState, despawn_all_ui};
+use crate::AppState;
 
 pub fn plugin(app: &mut App) {
     app.add_sub_state::<GameState>()
         .add_systems(OnEnter(GameState::Paused), pause_ui.spawn())
-        .add_systems(OnExit(GameState::Paused), despawn_all_ui)
         .add_systems(Update, handle_input.run_if(in_state(GameState::Paused)));
 }
 
@@ -43,6 +42,7 @@ fn pause_ui() -> impl Scene {
                 bottom: percent(15),
             },
         }
+        DespawnOnExit<GameState>(GameState::Paused)
         TabGroup
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [

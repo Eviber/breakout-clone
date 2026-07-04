@@ -25,15 +25,6 @@ fn main() {
         .run();
 }
 
-fn despawn_all_ui(
-    mut commands: Commands,
-    root_nodes: Query<Entity, (With<Node>, Without<ChildOf>)>,
-) {
-    for root_node in root_nodes {
-        commands.entity(root_node).despawn();
-    }
-}
-
 fn camera_scene() -> impl SceneList {
     bsn! { Camera2d }
 }

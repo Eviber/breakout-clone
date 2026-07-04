@@ -5,7 +5,6 @@ mod game_pause;
 use bevy::prelude::*;
 
 use crate::AppState;
-use crate::despawn_all_ui;
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
 #[source(AppState = AppState::InGame)]
@@ -24,7 +23,6 @@ pub fn plugin(app: &mut App) {
         .add_plugins(game::plugin)
         .add_plugins(game_over::plugin)
         .add_systems(OnEnter(GameState::Running), game_ui.spawn())
-        .add_systems(OnExit(GameState::Running), despawn_all_ui)
         .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
 }
 
@@ -42,6 +40,7 @@ fn game_ui() -> impl Scene {
         //     align_items: AlignItems::Center,
         //     justify_content: JustifyContent::Center,
         // }
+        // DespawnOnExit<GameState>(GameState::Running)
         // Children [
         //     (
         //         Text::new("In construction\nPress escape to quit to main menu.")

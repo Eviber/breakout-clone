@@ -13,12 +13,10 @@ use bevy::{
 };
 
 use crate::AppState;
-use crate::despawn_all_ui;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(UiTheme(create_dark_theme()))
-        .add_systems(OnEnter(AppState::MainMenu), main_menu.spawn())
-        .add_systems(OnExit(AppState::MainMenu), despawn_all_ui);
+        .add_systems(OnEnter(AppState::MainMenu), main_menu.spawn());
 }
 
 fn button(name: &'static str) -> impl Scene {
@@ -51,6 +49,7 @@ fn main_menu() -> impl Scene {
                 bottom: percent(20),
             },
         }
+        DespawnOnExit<AppState>(AppState::MainMenu)
         TabGroup
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
