@@ -25,8 +25,13 @@ fn main() {
         .run();
 }
 
-fn despawn_ui(mut commands: Commands, root_node: Single<Entity, (With<Node>, Without<ChildOf>)>) {
-    commands.entity(*root_node).despawn();
+fn despawn_all_ui(
+    mut commands: Commands,
+    root_nodes: Query<Entity, (With<Node>, Without<ChildOf>)>,
+) {
+    for root_node in root_nodes {
+        commands.entity(root_node).despawn();
+    }
 }
 
 fn camera_scene() -> impl SceneList {

@@ -13,12 +13,12 @@ use bevy::{
 };
 
 use crate::AppState;
-use crate::despawn_ui;
+use crate::despawn_all_ui;
 
 pub fn plugin(app: &mut App) {
     app.insert_resource(UiTheme(create_dark_theme()))
         .add_systems(OnEnter(AppState::MainMenu), main_menu.spawn())
-        .add_systems(OnExit(AppState::MainMenu), despawn_ui);
+        .add_systems(OnExit(AppState::MainMenu), despawn_all_ui);
 }
 
 fn button(name: &'static str) -> impl Scene {

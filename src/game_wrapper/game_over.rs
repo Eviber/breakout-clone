@@ -10,11 +10,11 @@ use bevy::{
 };
 
 use super::{GameState, Lives};
-use crate::{AppState, despawn_ui};
+use crate::{AppState, despawn_all_ui};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::GameOver), spawn_game_over_ui)
-        .add_systems(OnExit(GameState::GameOver), despawn_ui)
+        .add_systems(OnExit(GameState::GameOver), despawn_all_ui)
         .add_systems(Update, handle_input.run_if(in_state(GameState::GameOver)));
 }
 
