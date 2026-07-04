@@ -12,6 +12,14 @@ struct Position(Vec2);
 #[derive(Component, Clone, Default)]
 struct Velocity(Vec2);
 
+#[derive(EntityEvent)]
+struct BrickDestroyed {
+    entity: Entity,
+}
+
+#[derive(Resource)]
+struct Score(u32);
+
 #[derive(Component, Clone, Default)]
 struct Collider(Rectangle);
 
@@ -127,10 +135,16 @@ pub fn plugin(app: &mut App) {
             spawn_entities.before(project_positions),
             spawn_bricks.before(project_positions),
             project_positions,
-            init_lives,
+            init_resources,
         ),
     )
-    .add_systems(Update, update_lives_display.run_if(resource_changed::<Lives>))
+    .add_systems(
+        Update,
+        (
+            update_lives_display.run_if(resource_changed::<Lives>),
+            update_score_display.run_if(resource_changed::<Score>),
+        )
+    )
     .add_systems(
         FixedUpdate,
         (
@@ -142,14 +156,16 @@ pub fn plugin(app: &mut App) {
             constrain_paddle_position.after(move_paddle),
             handle_lost_ball,
             set_win_state.run_if(not(any_with_component::<Brick>)),
-            check_out_of_lives,
+            check_out_of_lives.run_if(resource_changed::<Lives>),
         )
             .run_if(in_state(GameState::Running)),
-    );
+    )
+    .add_observer(destroy_brick);
 }
 
-fn init_lives(mut commands: Commands) {
+fn init_resources(mut commands: Commands) {
     commands.insert_resource(Lives(3));
+    commands.insert_resource(Score(0));
 }
 
 fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<Lives>) {
@@ -163,6 +179,13 @@ use super::LivesDisplay;
 fn update_lives_display(mut text: Single<&mut Text, With<LivesDisplay>>, lives: Res<Lives>) {
     info!("Lives updated: {}", lives.0);
     text.0 = format!("{} lives", lives.0);
+}
+
+use super::ScoreDisplay;
+
+fn update_score_display(mut text: Single<&mut Text, With<ScoreDisplay>>, score: Res<Score>) {
+    info!("Score updated: {}", score.0);
+    text.0 = format!("{} points", score.0);
 }
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
@@ -252,6 +275,11 @@ fn handle_lost_ball(
     }
 }
 
+fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
+    commands.entity(event.entity).despawn();
+    score.0 += 10;
+}
+
 fn handle_collisions(
     mut commands: Commands,
     ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
@@ -288,7 +316,7 @@ fn handle_collisions(
             }
         }
         if is_brick {
-            commands.entity(entity).despawn();
+            commands.trigger(BrickDestroyed { entity });
             has_despawned = true;
         }
     }

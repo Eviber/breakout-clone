@@ -35,6 +35,9 @@ fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextSta
 #[derive(Component, Default, Clone, Copy)]
 struct LivesDisplay;
 
+#[derive(Component, Default, Clone, Copy)]
+struct ScoreDisplay;
+
 fn game_ui() -> impl Scene {
     bsn! {
         Node {
@@ -46,11 +49,15 @@ fn game_ui() -> impl Scene {
         DespawnOnExit<AppState>(AppState::InGame)
         Children [
             (
+                ScoreDisplay
+                Text::new(format!("{} points", 0))
+            ),
+            (
                 LivesDisplay
                 Text::new(format!("{} lives", 3))
                 // TextColor(Color::BLACK)
                 // TextLayout::justify(Justify::Center)
-            )
+            ),
         ]
     }
 }
