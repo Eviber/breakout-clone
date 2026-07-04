@@ -43,7 +43,6 @@ impl Ball {
     fn scene() -> impl Scene {
         bsn! {
             Position(BALL_BASE_POS)
-            Velocity(BALL_BASE_VELOCITY)
             Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
             Mesh2d(asset_value(BALL_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
@@ -149,7 +148,9 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (
             project_positions,
+            launch_ball.before(move_ball),
             move_ball.before(project_positions),
+            move_locked_ball.after(move_paddle).before(project_positions),
             handle_collisions.after(move_ball),
             handle_player_input.before(move_paddle),
             move_paddle.before(project_positions),
@@ -202,6 +203,12 @@ fn handle_player_input(
         paddle_velocity.0.x = PADDLE_SPEED;
     } else {
         paddle_velocity.0.x = 0.;
+    }
+}
+
+fn launch_ball(mut commands: Commands, keyboard_input: Res<ButtonInput<KeyCode>>, ball: Single<Entity, (With<Ball>, Without<Velocity>)>) {
+    if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
+        commands.entity(*ball).insert(Velocity(BALL_BASE_VELOCITY));
     }
 }
 
@@ -263,15 +270,15 @@ fn constrain_paddle_position(
 }
 
 fn handle_lost_ball(
-    ball: Single<(&mut Velocity, &mut Position), With<Ball>>,
+    mut commands: Commands,
+    ball: Single<(Entity, &Position), With<Ball>>,
     paddle_pos: Single<&Position, (With<Paddle>, Without<Ball>)>,
     mut lives: ResMut<Lives>,
 ) {
-    let (mut ball_velocity, mut ball_position) = ball.into_inner();
+    let (ball_entity, ball_position) = ball.into_inner();
     if ball_position.0.y < paddle_pos.0.y - 100. {
-        ball_position.0 = BALL_BASE_POS;
-        ball_velocity.0 = BALL_BASE_VELOCITY;
         lives.0 -= 1;
+        commands.entity(ball_entity).remove::<Velocity>();
     }
 }
 
@@ -325,6 +332,13 @@ fn handle_collisions(
 fn move_ball(ball: Single<(&mut Position, &Velocity), With<Ball>>) {
     let (mut position, velocity) = ball.into_inner();
     position.0 += velocity.0 * BALL_SPEED;
+}
+
+fn move_locked_ball(
+    mut ball: Single<&mut Position, (With<Ball>, Without<Velocity>)>,
+    paddle: Single<&Position, (With<Paddle>, Without<Ball>)>,
+) {
+    ball.0 = paddle.0 + vec2(0., 20.);
 }
 
 fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
