@@ -251,6 +251,7 @@ fn handle_collisions(
     other_things: Query<(&Position, &Collider, Has<Paddle>, Has<Brick>, Entity), Without<Ball>>,
 ) {
     let (mut ball_velocity, ball_position, ball_collider) = ball.into_inner();
+    let mut has_despawned = false;
 
     for (other_position, other_collider, is_paddle, is_brick, entity) in &other_things {
         let Some(collision) = collide_with_side(
@@ -268,6 +269,9 @@ fn handle_collisions(
             ball_velocity.0 = dir * BALL_SPEED;
             continue;
         }
+        if is_brick && has_despawned {
+            continue;
+        }
         match collision {
             Collision::Left | Collision::Right => {
                 ball_velocity.0.x *= -1.;
@@ -278,6 +282,7 @@ fn handle_collisions(
         }
         if is_brick {
             commands.entity(entity).despawn();
+            has_despawned = true;
         }
     }
 }
