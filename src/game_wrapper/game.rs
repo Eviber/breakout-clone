@@ -121,9 +121,8 @@ fn spawn_bricks(mut commands: Commands) {
 }
 
 pub fn plugin(app: &mut App) {
-    // HACK: Project position on entering state, to make them visible sooner
     app.add_systems(
-        OnEnter(AppState::InGame),
+        OnEnter(AppState::MainMenu),
         (
             spawn_entities.before(project_positions),
             spawn_bricks.before(project_positions),
