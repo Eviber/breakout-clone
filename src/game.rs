@@ -7,8 +7,8 @@ mod ball {
     use super::GameState;
     use super::GameSystemSet;
     use super::Lives;
-    use super::PADDLE_Y;
-    use super::Paddle;
+    use super::paddle::PADDLE_Y;
+    use super::paddle::Paddle;
     use super::collision;
     use super::physics::Collider;
     use super::physics::Position;
@@ -112,13 +112,117 @@ mod ball {
     }
 }
 
+mod paddle {
+    use bevy::prelude::*;
+    use bevy::math::bounding::Aabb2d;
+
+    use crate::AppState;
+    use super::GameState;
+    use super::GameSystemSet;
+    use super::ball::{self, Ball, BallCollision};
+    use super::collision;
+    use super::physics::{Collider, Position, Velocity};
+    use super::Gutter;
+
+    pub fn plugin(app: &mut App) {
+        app.add_systems(
+            FixedUpdate,
+            (
+                handle_player_input.in_set(GameSystemSet::Input),
+                constrain_paddle_position.in_set(GameSystemSet::PreCollision),
+            )
+                .run_if(in_state(GameState::Running)),
+        );
+    }
+
+    #[derive(SceneComponent, Clone, Default)]
+    #[require(Velocity)]
+    pub struct Paddle;
+
+    pub const PADDLE_SHAPE: Rectangle = Rectangle::new(100., 10.);
+    pub const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
+    pub const PADDLE_SPEED: f32 = 5.;
+    pub const PADDLE_Y: f32 = -300.;
+
+    impl Paddle {
+        pub fn scene() -> impl Scene {
+            let x = 0.;
+            let y = PADDLE_Y;
+            bsn! {
+                Position(vec2(x,y))
+                Collider(PADDLE_SHAPE)
+                Mesh2d(asset_value(PADDLE_SHAPE))
+                MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
+                DespawnOnExit<AppState>(AppState::InGame)
+                on(collide_paddle)
+            }
+        }
+    }
+
+    fn handle_player_input(
+        keyboard_input: Res<ButtonInput<KeyCode>>,
+        mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
+    ) {
+        if keyboard_input.pressed(KeyCode::ArrowLeft) {
+            paddle_velocity.0.x = -PADDLE_SPEED;
+        } else if keyboard_input.pressed(KeyCode::ArrowRight) {
+            paddle_velocity.0.x = PADDLE_SPEED;
+        } else {
+            paddle_velocity.0.x = 0.;
+        }
+    }
+
+    fn constrain_paddle_position(
+        paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>, Without<Ball>)>,
+        gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>, Without<Ball>)>,
+    ) {
+        let (mut paddle_position, paddle_collider) = paddles.into_inner();
+        for (gutter_position, gutter_collider) in &gutters {
+            let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
+            let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
+
+            if let Some(collision) = collision::collide_with_side(paddle_aabb, gutter_aabb) {
+                match collision {
+                    collision::Collision::Left => {
+                        paddle_position.0.x = gutter_position.0.x
+                            - gutter_collider.half_size().x
+                            - paddle_collider.half_size().x;
+                    }
+                    collision::Collision::Right => {
+                        paddle_position.0.x = gutter_position.0.x
+                            + gutter_collider.half_size().x
+                            + paddle_collider.half_size().x;
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // TODO: Rework rebounds
+    fn collide_paddle(
+        _event: On<BallCollision>,
+        ball: Single<(&mut Velocity, &Position), With<Ball>>,
+        paddle: Single<(&Position, &Collider), (With<Paddle>, Without<Ball>)>,
+    ) {
+        let (mut ball_velocity, ball_position) = ball.into_inner();
+        let (paddle_position, paddle_collider) = *paddle;
+        let paddle_pos = Vec2 {
+            x: paddle_position.0.x,
+            y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
+        };
+        let dir = (ball_position.0 - paddle_pos).normalize();
+        ball_velocity.0 = dir * ball::BALL_SPEED;
+    }
+}
+
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
-use bevy::math::bounding::Aabb2d;
 use bevy::prelude::*;
 
 use crate::AppState;
 use ball::Ball;
 use ball::BallCollision;
+use paddle::Paddle;
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
 #[source(AppState = AppState::InGame)]
@@ -176,6 +280,7 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
         .add_plugins(ball::plugin)
+        .add_plugins(paddle::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
         .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
     app.add_systems(
@@ -198,9 +303,7 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (
             project_positions.in_set(GameSystemSet::Display),
-            handle_player_input.in_set(GameSystemSet::Input),
             move_entities.in_set(GameSystemSet::Movement),
-            constrain_paddle_position.in_set(GameSystemSet::PreCollision),
             set_win_state
                 .run_if(not(any_with_component::<Brick>))
                 .in_set(GameSystemSet::PostCollision)
@@ -286,30 +389,6 @@ struct BrickDestroyed {
 #[derive(Resource)]
 struct Score(u32);
 
-#[derive(SceneComponent, Clone, Default)]
-#[require(Velocity)]
-struct Paddle;
-
-const PADDLE_SHAPE: Rectangle = Rectangle::new(100., 10.);
-const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
-const PADDLE_SPEED: f32 = 5.;
-const PADDLE_Y: f32 = -300.;
-
-impl Paddle {
-    fn scene() -> impl Scene {
-        let x = 0.;
-        let y = PADDLE_Y;
-        bsn! {
-            Position(vec2(x,y))
-            Collider(PADDLE_SHAPE)
-            Mesh2d(asset_value(PADDLE_SHAPE))
-            MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
-            DespawnOnExit<AppState>(AppState::InGame)
-            on(collide_paddle)
-        }
-    }
-}
-
 #[derive(Component, Clone, Default)]
 struct Gutter;
 
@@ -382,19 +461,6 @@ fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::GameOver);
 }
 
-fn handle_player_input(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
-) {
-    if keyboard_input.pressed(KeyCode::ArrowLeft) {
-        paddle_velocity.0.x = -PADDLE_SPEED;
-    } else if keyboard_input.pressed(KeyCode::ArrowRight) {
-        paddle_velocity.0.x = PADDLE_SPEED;
-    } else {
-        paddle_velocity.0.x = 0.;
-    }
-}
-
 fn move_entities(entities: Query<(&mut Position, &Velocity)>) {
     for (mut position, velocity) in entities {
         position.0 += velocity.0;
@@ -438,33 +504,6 @@ mod collision {
     }
 }
 
-fn constrain_paddle_position(
-    paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>, Without<Ball>)>,
-    gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>, Without<Ball>)>,
-) {
-    let (mut paddle_position, paddle_collider) = paddles.into_inner();
-    for (gutter_position, gutter_collider) in &gutters {
-        let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
-        let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
-
-        if let Some(collision) = collision::collide_with_side(paddle_aabb, gutter_aabb) {
-            match collision {
-                collision::Collision::Left => {
-                    paddle_position.0.x = gutter_position.0.x
-                        - gutter_collider.half_size().x
-                        - paddle_collider.half_size().x;
-                }
-                collision::Collision::Right => {
-                    paddle_position.0.x = gutter_position.0.x
-                        + gutter_collider.half_size().x
-                        + paddle_collider.half_size().x;
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
 fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
     commands.entity(event.entity).despawn();
     score.0 += 10;
@@ -497,22 +536,6 @@ fn collide_gutter(event: On<BallCollision>, mut ball_velocity: Single<&mut Veloc
             ball_velocity.0.y *= -1.;
         }
     }
-}
-
-// TODO: Rework rebounds
-fn collide_paddle(
-    _event: On<BallCollision>,
-    ball: Single<(&mut Velocity, &Position), With<Ball>>,
-    paddle: Single<(&Position, &Collider), (With<Paddle>, Without<Ball>)>,
-) {
-    let (mut ball_velocity, ball_position) = ball.into_inner();
-    let (paddle_position, paddle_collider) = *paddle;
-    let paddle_pos = Vec2 {
-        x: paddle_position.0.x,
-        y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
-    };
-    let dir = (ball_position.0 - paddle_pos).normalize();
-    ball_velocity.0 = dir * ball::BALL_SPEED;
 }
 
 fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
