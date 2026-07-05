@@ -45,7 +45,7 @@ mod ball {
     pub const BALL_SIZE: f32 = 10.;
     pub const BALL_SHAPE: Circle = Circle::new(BALL_SIZE);
     pub const BALL_COLOR: Color = Color::srgb(1., 0., 0.);
-    pub const BALL_SPEED: f32 = 2.;
+    pub const BALL_SPEED: f32 = 4.;
     pub const BALL_BASE_POS: Vec2 = vec2(0., -200.);
     pub const BALL_BASE_VELOCITY: Vec2 = vec2(0., BALL_SPEED);
 
@@ -107,7 +107,7 @@ mod ball {
 
     fn move_ball(ball: Single<(&mut Position, &Velocity), (With<Ball>, Without<Paddle>)>) {
         let (mut position, velocity) = ball.into_inner();
-        position.0 += velocity.0 * BALL_SPEED;
+        position.0 += velocity.0;
     }
 
     fn move_locked_ball(
