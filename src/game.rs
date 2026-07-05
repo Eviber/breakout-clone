@@ -16,17 +16,12 @@ use blocks::Brick;
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
 #[source(AppState = AppState::InGame)]
-pub enum GameState {
+enum GameState {
     #[default]
     Running,
     Paused,
     GameOver,
 }
-
-#[derive(Resource)]
-pub struct Lives(usize);
-
-// TODO:     Organize this mess
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 enum GameSystemSet {
@@ -38,6 +33,12 @@ enum GameSystemSet {
     PostCollision,
     Display,
 }
+
+#[derive(Resource)]
+struct Lives(usize);
+
+#[derive(Resource)]
+struct Score(u32);
 
 pub fn plugin(app: &mut App) {
     app.edit_schedule(FixedUpdate, |schedule| {
@@ -96,9 +97,6 @@ fn check_pause(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextStat
         next_state.set(GameState::Paused);
     }
 }
-
-#[derive(Resource)]
-struct Score(u32);
 
 fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<Lives>) {
     if lives.0 == 0 {
