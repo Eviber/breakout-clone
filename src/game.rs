@@ -425,32 +425,27 @@ pub fn plugin(app: &mut App) {
         .add_plugins(blocks::plugin)
         .add_plugins(level::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
-        .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
-    app.add_systems(
-        OnEnter(AppState::MainMenu),
-        project_positions.in_set(GameSystemSet::Display),
-    )
-    .add_systems(
-        Update,
-        (
-            update_lives_display.run_if(resource_changed::<Lives>),
-            update_score_display.run_if(resource_changed::<Score>),
-        ),
-    )
-    .add_systems(
-        FixedUpdate,
-        (
-            project_positions.in_set(GameSystemSet::Display),
-            set_win_state
-                .run_if(not(any_with_component::<Brick>))
-                .in_set(GameSystemSet::PostCollision)
-                .ambiguous_with(check_out_of_lives),
-            check_out_of_lives
-                .run_if(resource_changed::<Lives>)
-                .in_set(GameSystemSet::PostCollision),
+        .add_systems(Update, handle_input.run_if(in_state(GameState::Running)))
+        .add_systems(
+            Update,
+            (
+                update_lives_display.run_if(resource_changed::<Lives>),
+                update_score_display.run_if(resource_changed::<Score>),
+            ),
         )
-            .run_if(in_state(GameState::Running)),
-    );
+        .add_systems(
+            FixedUpdate,
+            (
+                set_win_state
+                    .run_if(not(any_with_component::<Brick>))
+                    .in_set(GameSystemSet::PostCollision)
+                    .ambiguous_with(check_out_of_lives),
+                check_out_of_lives
+                    .run_if(resource_changed::<Lives>)
+                    .in_set(GameSystemSet::PostCollision),
+            )
+                .run_if(in_state(GameState::Running)),
+        );
 }
 
 fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
@@ -492,10 +487,21 @@ fn game_ui() -> impl Scene {
 mod physics {
     use bevy::prelude::*;
 
-    use super::GameSystemSet;
+    use super::{GameState, GameSystemSet};
+    use crate::AppState;
 
     pub fn plugin(app: &mut App) {
         app.add_systems(FixedUpdate, move_entities.in_set(GameSystemSet::Movement));
+        app.add_systems(
+            OnEnter(AppState::MainMenu),
+            project_positions.in_set(GameSystemSet::Display),
+        )
+        .add_systems(
+            FixedUpdate,
+            project_positions
+                .in_set(GameSystemSet::Display)
+                .run_if(in_state(GameState::Running)),
+        );
     }
 
     #[derive(Component, Clone, Default)]
@@ -514,7 +520,7 @@ mod physics {
         }
     }
 
-    pub fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
+    fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
         for (mut transform, position) in &mut positionables {
             transform.translation = position.0.extend(0.);
         }
@@ -526,8 +532,6 @@ mod physics {
         }
     }
 }
-
-use physics::project_positions;
 
 #[derive(Resource)]
 struct Score(u32);
