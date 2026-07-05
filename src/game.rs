@@ -26,6 +26,7 @@ enum GameSystemSet {
     Preload,
     Input,
     Movement,
+    PreCollision,
     Collision,
     PostCollision,
     Display,
@@ -52,6 +53,7 @@ pub fn plugin(app: &mut App) {
         (
             GameSystemSet::Input,
             GameSystemSet::Movement,
+            GameSystemSet::PreCollision,
             GameSystemSet::Collision,
             GameSystemSet::PostCollision,
             GameSystemSet::Display,
@@ -91,8 +93,8 @@ pub fn plugin(app: &mut App) {
                 .after(constrain_paddle_position),
             handle_player_input.in_set(GameSystemSet::Input),
             move_paddle.in_set(GameSystemSet::Movement),
-            constrain_paddle_position.in_set(GameSystemSet::Collision),
             handle_lost_ball.in_set(GameSystemSet::Collision),
+            constrain_paddle_position.in_set(GameSystemSet::PreCollision),
             set_win_state
                 .run_if(not(any_with_component::<Brick>))
                 .in_set(GameSystemSet::PostCollision)
