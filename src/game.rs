@@ -307,13 +307,62 @@ mod blocks {
     }
 }
 
+mod level {
+    use bevy::prelude::*;
+
+    use super::ball::Ball;
+    use super::blocks::{GUTTER_WIDTH, brick, gutter};
+    use super::paddle::Paddle;
+    use super::{GameSystemSet, Lives, Score};
+    use crate::AppState;
+
+    pub fn plugin(app: &mut App) {
+        app.add_systems(
+            OnEnter(AppState::MainMenu),
+            (
+                spawn_entities.in_set(GameSystemSet::Preload),
+                spawn_bricks.in_set(GameSystemSet::Preload),
+                init_resources,
+            ),
+        );
+    }
+
+    fn init_resources(mut commands: Commands) {
+        commands.insert_resource(Lives(3));
+        commands.insert_resource(Score(0));
+    }
+
+    fn spawn_bricks(mut commands: Commands) {
+        for line in 0..3 {
+            for col in 0..10 {
+                let x = (col * 100 - 500) as f32;
+                let y = (line * 50 + 200) as f32;
+                commands.spawn_scene(brick(x, y));
+            }
+        }
+    }
+
+    fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
+        let half_width = window.resolution.width() / 2.;
+        let half_height = window.resolution.height() / 2.;
+        let shape_v = Rectangle::new(GUTTER_WIDTH, window.resolution.height());
+        let shape_h = Rectangle::new(window.resolution.width(), GUTTER_WIDTH);
+
+        commands.spawn_scene_list(bsn_list! [
+            @Ball,
+            @Paddle,
+            gutter(half_width, 0., shape_v),
+            gutter(-half_width, 0., shape_v),
+            gutter(0., half_height, shape_h),
+        ]);
+    }
+}
+
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::prelude::*;
 
 use crate::AppState;
-use ball::Ball;
-use blocks::{Brick, GUTTER_WIDTH, brick, gutter};
-use paddle::Paddle;
+use blocks::Brick;
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
 #[source(AppState = AppState::InGame)]
@@ -374,16 +423,12 @@ pub fn plugin(app: &mut App) {
         .add_plugins(ball::plugin)
         .add_plugins(paddle::plugin)
         .add_plugins(blocks::plugin)
+        .add_plugins(level::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
         .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
     app.add_systems(
         OnEnter(AppState::MainMenu),
-        (
-            spawn_entities.in_set(GameSystemSet::Preload),
-            spawn_bricks.in_set(GameSystemSet::Preload),
-            project_positions.in_set(GameSystemSet::Display),
-            init_resources,
-        ),
+        project_positions.in_set(GameSystemSet::Display),
     )
     .add_systems(
         Update,
@@ -487,21 +532,6 @@ use physics::project_positions;
 #[derive(Resource)]
 struct Score(u32);
 
-fn spawn_bricks(mut commands: Commands) {
-    for line in 0..3 {
-        for col in 0..10 {
-            let x = (col * 100 - 500) as f32;
-            let y = (line * 50 + 200) as f32;
-            commands.spawn_scene(brick(x, y));
-        }
-    }
-}
-
-fn init_resources(mut commands: Commands) {
-    commands.insert_resource(Lives(3));
-    commands.insert_resource(Score(0));
-}
-
 fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<Lives>) {
     if lives.0 == 0 {
         next_state.set(GameState::GameOver);
@@ -557,19 +587,4 @@ mod collision {
 
         Some(side)
     }
-}
-
-fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
-    let half_width = window.resolution.width() / 2.;
-    let half_height = window.resolution.height() / 2.;
-    let shape_v = Rectangle::new(GUTTER_WIDTH, window.resolution.height());
-    let shape_h = Rectangle::new(window.resolution.width(), GUTTER_WIDTH);
-
-    commands.spawn_scene_list(bsn_list! [
-        @Ball,
-        @Paddle,
-        gutter(half_width, 0., shape_v),
-        gutter(-half_width, 0., shape_v),
-        gutter(0., half_height, shape_h),
-    ]);
 }
