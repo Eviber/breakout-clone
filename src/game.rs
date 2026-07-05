@@ -203,7 +203,6 @@ const BRICK_SHAPE: Rectangle = Rectangle::new(60., 20.);
 fn brick(x: f32, y: f32) -> impl Scene {
     bsn! {
         Brick
-        Gutter
         Position(vec2(x, y))
         Collider(BRICK_SHAPE)
         Mesh2d(asset_value(BRICK_SHAPE))
