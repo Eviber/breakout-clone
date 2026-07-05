@@ -425,7 +425,7 @@ pub fn plugin(app: &mut App) {
         .add_plugins(blocks::plugin)
         .add_plugins(level::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
-        .add_systems(Update, handle_input.run_if(in_state(GameState::Running)))
+        .add_systems(Update, check_pause.run_if(in_state(GameState::Running)))
         .add_systems(
             Update,
             (
@@ -448,7 +448,7 @@ pub fn plugin(app: &mut App) {
         );
 }
 
-fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+fn check_pause(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
     if input.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::Paused);
     }
