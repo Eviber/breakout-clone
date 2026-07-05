@@ -1,11 +1,130 @@
 mod game_over;
 mod game_pause;
+mod ball {
+    use bevy::math::bounding::Aabb2d;
+    use bevy::prelude::*;
+
+    use super::GameState;
+    use super::GameSystemSet;
+    use super::Lives;
+    use super::PADDLE_Y;
+    use super::Paddle;
+    use super::collision;
+    use super::physics::Collider;
+    use super::physics::Position;
+    use super::physics::Velocity;
+    use crate::AppState;
+
+    pub fn plugin(app: &mut App) {
+        app.add_systems(
+            OnEnter(AppState::MainMenu),
+            (move_locked_ball.in_set(GameSystemSet::PostCollision),),
+        )
+        .add_systems(
+            FixedUpdate,
+            (
+                launch_ball.in_set(GameSystemSet::Input),
+                move_ball.in_set(GameSystemSet::Movement),
+                move_locked_ball.in_set(GameSystemSet::PostCollision),
+                handle_collisions.in_set(GameSystemSet::Collision),
+                handle_lost_ball.in_set(GameSystemSet::Collision),
+            )
+                .run_if(in_state(GameState::Running)),
+        );
+    }
+
+    #[derive(EntityEvent)]
+    pub struct BallCollision {
+        pub entity: Entity,
+        pub side: collision::Collision,
+    }
+
+    #[derive(SceneComponent, Clone, Default)]
+    pub struct Ball;
+
+    pub const BALL_SIZE: f32 = 10.;
+    pub const BALL_SHAPE: Circle = Circle::new(BALL_SIZE);
+    pub const BALL_COLOR: Color = Color::srgb(1., 0., 0.);
+    pub const BALL_SPEED: f32 = 2.;
+    pub const BALL_BASE_POS: Vec2 = vec2(0., -200.);
+    pub const BALL_BASE_VELOCITY: Vec2 = vec2(0., BALL_SPEED);
+
+    impl Ball {
+        pub fn scene() -> impl Scene {
+            bsn! {
+                Position(BALL_BASE_POS)
+                Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
+                Mesh2d(asset_value(BALL_SHAPE))
+                MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
+                DespawnOnExit<AppState>(AppState::InGame)
+            }
+        }
+    }
+
+    fn launch_ball(
+        mut commands: Commands,
+        keyboard_input: Res<ButtonInput<KeyCode>>,
+        ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
+    ) {
+        if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
+            commands.entity(*ball).insert(Velocity(BALL_BASE_VELOCITY));
+        }
+    }
+
+    fn handle_lost_ball(
+        mut commands: Commands,
+        ball: Single<(Entity, &Position), With<Ball>>,
+        mut lives: ResMut<Lives>,
+    ) {
+        let (ball_entity, ball_position) = ball.into_inner();
+        if ball_position.0.y < PADDLE_Y - 100. {
+            lives.0 -= 1;
+            commands.entity(ball_entity).remove::<Velocity>();
+        }
+    }
+
+    fn handle_collisions(
+        mut commands: Commands,
+        ball: Single<(&Position, &Collider), With<Ball>>,
+        other_things: Query<(&Position, &Collider, Entity), Without<Ball>>,
+    ) {
+        let (ball_position, ball_collider) = ball.into_inner();
+
+        for (other_position, other_collider, entity) in &other_things {
+            let Some(collision) = collision::collide_with_side(
+                Aabb2d::new(ball_position.0, ball_collider.half_size()),
+                Aabb2d::new(other_position.0, other_collider.half_size()),
+            ) else {
+                continue;
+            };
+            commands.trigger(BallCollision {
+                entity,
+                side: collision,
+            });
+            break;
+        }
+    }
+
+    fn move_ball(ball: Single<(&mut Position, &Velocity), (With<Ball>, Without<Paddle>)>) {
+        let (mut position, velocity) = ball.into_inner();
+        position.0 += velocity.0 * BALL_SPEED;
+    }
+
+    fn move_locked_ball(
+        mut ball: Single<&mut Position, (With<Ball>, Without<Velocity>)>,
+        paddle: Single<&Position, (With<Paddle>, Without<Ball>)>,
+    ) {
+        ball.0 = paddle.0 + vec2(0., 20.);
+    }
+}
 
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::math::bounding::Aabb2d;
 use bevy::prelude::*;
 
 use crate::AppState;
+use ball::Ball;
+use ball::BallCollision;
 
 #[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
 #[source(AppState = AppState::InGame)]
@@ -62,6 +181,7 @@ pub fn plugin(app: &mut App) {
     );
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
+        .add_plugins(ball::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
         .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
     app.add_systems(
@@ -69,7 +189,6 @@ pub fn plugin(app: &mut App) {
         (
             spawn_entities.in_set(GameSystemSet::Preload),
             spawn_bricks.in_set(GameSystemSet::Preload),
-            move_locked_ball.in_set(GameSystemSet::PostCollision),
             project_positions.in_set(GameSystemSet::Display),
             init_resources,
         ),
@@ -85,15 +204,8 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (
             project_positions.in_set(GameSystemSet::Display),
-            launch_ball.in_set(GameSystemSet::Input),
-            move_ball.in_set(GameSystemSet::Movement),
-            move_locked_ball.in_set(GameSystemSet::PostCollision),
-            handle_collisions
-                .in_set(GameSystemSet::Collision)
-                .after(constrain_paddle_position),
             handle_player_input.in_set(GameSystemSet::Input),
             move_paddle.in_set(GameSystemSet::Movement),
-            handle_lost_ball.in_set(GameSystemSet::Collision),
             constrain_paddle_position.in_set(GameSystemSet::PreCollision),
             set_win_state
                 .run_if(not(any_with_component::<Brick>))
@@ -179,28 +291,6 @@ struct BrickDestroyed {
 
 #[derive(Resource)]
 struct Score(u32);
-
-#[derive(SceneComponent, Clone, Default)]
-struct Ball;
-
-const BALL_SIZE: f32 = 10.;
-const BALL_SHAPE: Circle = Circle::new(BALL_SIZE);
-const BALL_COLOR: Color = Color::srgb(1., 0., 0.);
-const BALL_SPEED: f32 = 2.;
-const BALL_BASE_POS: Vec2 = vec2(0., -200.);
-const BALL_BASE_VELOCITY: Vec2 = vec2(0., BALL_SPEED);
-
-impl Ball {
-    fn scene() -> impl Scene {
-        bsn! {
-            Position(BALL_BASE_POS)
-            Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
-            Mesh2d(asset_value(BALL_SHAPE))
-            MeshMaterial2d<ColorMaterial>(asset_value(BALL_COLOR))
-            DespawnOnExit<AppState>(AppState::InGame)
-        }
-    }
-}
 
 #[derive(SceneComponent, Clone, Default)]
 #[require(Velocity)]
@@ -311,16 +401,6 @@ fn handle_player_input(
     }
 }
 
-fn launch_ball(
-    mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
-) {
-    if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
-        commands.entity(*ball).insert(Velocity(BALL_BASE_VELOCITY));
-    }
-}
-
 fn move_paddle(paddle: Single<(&mut Position, &Velocity), (With<Paddle>, Without<Ball>)>) {
     let (mut position, velocity) = paddle.into_inner();
     position.0 += velocity.0;
@@ -390,27 +470,9 @@ fn constrain_paddle_position(
     }
 }
 
-fn handle_lost_ball(
-    mut commands: Commands,
-    ball: Single<(Entity, &Position), With<Ball>>,
-    mut lives: ResMut<Lives>,
-) {
-    let (ball_entity, ball_position) = ball.into_inner();
-    if ball_position.0.y < PADDLE_Y - 100. {
-        lives.0 -= 1;
-        commands.entity(ball_entity).remove::<Velocity>();
-    }
-}
-
 fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
     commands.entity(event.entity).despawn();
     score.0 += 10;
-}
-
-#[derive(EntityEvent)]
-struct BallCollision {
-    entity: Entity,
-    side: collision::Collision,
 }
 
 fn collide_brick(
@@ -455,41 +517,7 @@ fn collide_paddle(
         y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
     };
     let dir = (ball_position.0 - paddle_pos).normalize();
-    ball_velocity.0 = dir * BALL_SPEED;
-}
-
-fn handle_collisions(
-    mut commands: Commands,
-    ball: Single<(&Position, &Collider), With<Ball>>,
-    other_things: Query<(&Position, &Collider, Entity), Without<Ball>>,
-) {
-    let (ball_position, ball_collider) = ball.into_inner();
-
-    for (other_position, other_collider, entity) in &other_things {
-        let Some(collision) = collision::collide_with_side(
-            Aabb2d::new(ball_position.0, ball_collider.half_size()),
-            Aabb2d::new(other_position.0, other_collider.half_size()),
-        ) else {
-            continue;
-        };
-        commands.trigger(BallCollision {
-            entity,
-            side: collision,
-        });
-        break;
-    }
-}
-
-fn move_ball(ball: Single<(&mut Position, &Velocity), (With<Ball>, Without<Paddle>)>) {
-    let (mut position, velocity) = ball.into_inner();
-    position.0 += velocity.0 * BALL_SPEED;
-}
-
-fn move_locked_ball(
-    mut ball: Single<&mut Position, (With<Ball>, Without<Velocity>)>,
-    paddle: Single<&Position, (With<Paddle>, Without<Ball>)>,
-) {
-    ball.0 = paddle.0 + vec2(0., 20.);
+    ball_velocity.0 = dir * ball::BALL_SPEED;
 }
 
 fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
