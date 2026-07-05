@@ -219,6 +219,7 @@ impl Paddle {
             Mesh2d(asset_value(PADDLE_SHAPE))
             MeshMaterial2d<ColorMaterial>(asset_value(PADDLE_COLOR))
             DespawnOnExit<AppState>(AppState::InGame)
+            on(collide_paddle)
         }
     }
 }
@@ -237,6 +238,7 @@ fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
         Mesh2d(asset_value(shape))
         MeshMaterial2d<ColorMaterial>(asset_value(GUTTER_COLOR))
         DespawnOnExit<AppState>(AppState::InGame)
+        on(collide_gutter)
     }
 }
 
@@ -255,6 +257,7 @@ fn brick(x: f32, y: f32) -> impl Scene {
         Mesh2d(asset_value(BRICK_SHAPE))
         MeshMaterial2d<ColorMaterial>(asset_value(BRICK_COLOR))
         DespawnOnExit<AppState>(AppState::InGame)
+        on(collide_brick)
     }
 }
 
@@ -402,47 +405,76 @@ fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: R
     score.0 += 10;
 }
 
-// TODO: Rework to use event and move specific logic to observers
+#[derive(EntityEvent)]
+struct BallCollision {
+    entity: Entity,
+    side: collision::Collision,
+}
+
+fn collide_brick(
+    event: On<BallCollision>,
+    mut commands: Commands,
+    mut ball_velocity: Single<&mut Velocity, With<Ball>>,
+) {
+    match event.side {
+        collision::Collision::Left | collision::Collision::Right => {
+            ball_velocity.0.x *= -1.;
+        }
+        collision::Collision::Top | collision::Collision::Bottom => {
+            ball_velocity.0.y *= -1.;
+        }
+    }
+    commands.trigger(BrickDestroyed {
+        entity: event.entity,
+    });
+}
+
+fn collide_gutter(event: On<BallCollision>, mut ball_velocity: Single<&mut Velocity, With<Ball>>) {
+    match event.side {
+        collision::Collision::Left | collision::Collision::Right => {
+            ball_velocity.0.x *= -1.;
+        }
+        collision::Collision::Top | collision::Collision::Bottom => {
+            ball_velocity.0.y *= -1.;
+        }
+    }
+}
+
 // TODO: Rework rebounds
+fn collide_paddle(
+    _event: On<BallCollision>,
+    ball: Single<(&mut Velocity, &Position), With<Ball>>,
+    paddle: Single<(&Position, &Collider), (With<Paddle>, Without<Ball>)>,
+) {
+    let (mut ball_velocity, ball_position) = ball.into_inner();
+    let (paddle_position, paddle_collider) = *paddle;
+    let paddle_pos = Vec2 {
+        x: paddle_position.0.x,
+        y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
+    };
+    let dir = (ball_position.0 - paddle_pos).normalize();
+    ball_velocity.0 = dir * BALL_SPEED;
+}
+
 fn handle_collisions(
     mut commands: Commands,
-    ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
-    other_things: Query<(&Position, &Collider, Has<Paddle>, Has<Brick>, Entity), Without<Ball>>,
+    ball: Single<(&Position, &Collider), With<Ball>>,
+    other_things: Query<(&Position, &Collider, Entity), Without<Ball>>,
 ) {
-    let (mut ball_velocity, ball_position, ball_collider) = ball.into_inner();
-    let mut has_despawned = false;
+    let (ball_position, ball_collider) = ball.into_inner();
 
-    for (other_position, other_collider, is_paddle, is_brick, entity) in &other_things {
+    for (other_position, other_collider, entity) in &other_things {
         let Some(collision) = collision::collide_with_side(
             Aabb2d::new(ball_position.0, ball_collider.half_size()),
             Aabb2d::new(other_position.0, other_collider.half_size()),
         ) else {
             continue;
         };
-        if is_paddle {
-            let paddle_pos = Vec2 {
-                x: other_position.0.x,
-                y: other_position.0.y + other_collider.half_size().y - other_collider.half_size().x,
-            };
-            let dir = (ball_position.0 - paddle_pos).normalize();
-            ball_velocity.0 = dir * BALL_SPEED;
-            continue;
-        }
-        if is_brick && has_despawned {
-            continue;
-        }
-        match collision {
-            collision::Collision::Left | collision::Collision::Right => {
-                ball_velocity.0.x *= -1.;
-            }
-            collision::Collision::Top | collision::Collision::Bottom => {
-                ball_velocity.0.y *= -1.;
-            }
-        }
-        if is_brick {
-            commands.trigger(BrickDestroyed { entity });
-            has_despawned = true;
-        }
+        commands.trigger(BallCollision {
+            entity,
+            side: collision,
+        });
+        break;
     }
 }
 
