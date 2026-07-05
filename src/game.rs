@@ -358,6 +358,64 @@ mod level {
     }
 }
 
+mod hud {
+    use bevy::prelude::*;
+
+    use super::{Lives, Score};
+    use crate::AppState;
+
+    pub fn plugin(app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                update_lives_display.run_if(resource_changed::<Lives>),
+                update_score_display.run_if(resource_changed::<Score>),
+            ),
+        )
+        .add_systems(OnEnter(AppState::InGame), game_ui.spawn());
+    }
+
+    #[derive(Component, Default, Clone, Copy)]
+    struct LivesDisplay;
+
+    #[derive(Component, Default, Clone, Copy)]
+    struct ScoreDisplay;
+
+    fn game_ui() -> impl Scene {
+        bsn! {
+            Node {
+                width: percent(100),
+                // height: percent(100),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::FlexEnd,
+            }
+            DespawnOnExit<AppState>(AppState::InGame)
+            Children [
+                (
+                    ScoreDisplay
+                    Text::new(format!("{} points", 0))
+                ),
+                (
+                    LivesDisplay
+                    Text::new(format!("{} lives", 3))
+                    // TextColor(Color::BLACK)
+                    // TextLayout::justify(Justify::Center)
+                ),
+            ]
+        }
+    }
+
+    fn update_lives_display(mut text: Single<&mut Text, With<LivesDisplay>>, lives: Res<Lives>) {
+        info!("Lives updated: {}", lives.0);
+        text.0 = format!("{} lives", lives.0);
+    }
+
+    fn update_score_display(mut text: Single<&mut Text, With<ScoreDisplay>>, score: Res<Score>) {
+        info!("Score updated: {}", score.0);
+        text.0 = format!("{} points", score.0);
+    }
+}
+
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::prelude::*;
 
@@ -419,20 +477,13 @@ pub fn plugin(app: &mut App) {
     );
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
+        .add_plugins(hud::plugin)
         .add_plugins(physics::plugin)
         .add_plugins(ball::plugin)
         .add_plugins(paddle::plugin)
         .add_plugins(blocks::plugin)
         .add_plugins(level::plugin)
-        .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
         .add_systems(Update, check_pause.run_if(in_state(GameState::Running)))
-        .add_systems(
-            Update,
-            (
-                update_lives_display.run_if(resource_changed::<Lives>),
-                update_score_display.run_if(resource_changed::<Score>),
-            ),
-        )
         .add_systems(
             FixedUpdate,
             (
@@ -451,36 +502,6 @@ pub fn plugin(app: &mut App) {
 fn check_pause(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
     if input.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::Paused);
-    }
-}
-
-#[derive(Component, Default, Clone, Copy)]
-struct LivesDisplay;
-
-#[derive(Component, Default, Clone, Copy)]
-struct ScoreDisplay;
-
-fn game_ui() -> impl Scene {
-    bsn! {
-        Node {
-            width: percent(100),
-            // height: percent(100),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::FlexEnd,
-        }
-        DespawnOnExit<AppState>(AppState::InGame)
-        Children [
-            (
-                ScoreDisplay
-                Text::new(format!("{} points", 0))
-            ),
-            (
-                LivesDisplay
-                Text::new(format!("{} lives", 3))
-                // TextColor(Color::BLACK)
-                // TextLayout::justify(Justify::Center)
-            ),
-        ]
     }
 }
 
@@ -540,16 +561,6 @@ fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<L
     if lives.0 == 0 {
         next_state.set(GameState::GameOver);
     }
-}
-
-fn update_lives_display(mut text: Single<&mut Text, With<LivesDisplay>>, lives: Res<Lives>) {
-    info!("Lives updated: {}", lives.0);
-    text.0 = format!("{} lives", lives.0);
-}
-
-fn update_score_display(mut text: Single<&mut Text, With<ScoreDisplay>>, score: Res<Score>) {
-    info!("Score updated: {}", score.0);
-    text.0 = format!("{} points", score.0);
 }
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
