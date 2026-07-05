@@ -1,6 +1,7 @@
 mod game_over;
 mod game_pause;
 
+use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::math::bounding::Aabb2d;
 use bevy::prelude::*;
 
@@ -29,6 +30,12 @@ enum GameSystemSet {
 }
 
 pub fn plugin(app: &mut App) {
+    app.edit_schedule(FixedUpdate, |schedule| {
+        schedule.set_build_settings(ScheduleBuildSettings {
+            ambiguity_detection: LogLevel::Warn,
+            ..default()
+        });
+    });
     app.configure_sets(
         OnEnter(AppState::MainMenu),
         (
@@ -307,7 +314,7 @@ fn launch_ball(
     }
 }
 
-fn move_paddle(paddle: Single<(&mut Position, &Velocity), With<Paddle>>) {
+fn move_paddle(paddle: Single<(&mut Position, &Velocity), (With<Paddle>, Without<Ball>)>) {
     let (mut position, velocity) = paddle.into_inner();
     position.0 += velocity.0;
 }
@@ -350,8 +357,8 @@ mod collision {
 }
 
 fn constrain_paddle_position(
-    paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>)>,
-    gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>)>,
+    paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>, Without<Ball>)>,
+    gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>, Without<Ball>)>,
 ) {
     let (mut paddle_position, paddle_collider) = paddles.into_inner();
     for (gutter_position, gutter_collider) in &gutters {
@@ -435,7 +442,7 @@ fn handle_collisions(
     }
 }
 
-fn move_ball(ball: Single<(&mut Position, &Velocity), With<Ball>>) {
+fn move_ball(ball: Single<(&mut Position, &Velocity), (With<Ball>, Without<Paddle>)>) {
     let (mut position, velocity) = ball.into_inner();
     position.0 += velocity.0 * BALL_SPEED;
 }
