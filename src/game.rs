@@ -19,6 +19,8 @@ pub enum GameState {
 #[derive(Resource)]
 pub struct Lives(usize);
 
+// TODO:     Organize this mess
+
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 enum GameSystemSet {
     Preload,
@@ -400,6 +402,8 @@ fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: R
     score.0 += 10;
 }
 
+// TODO: Rework to use event and move specific logic to observers
+// TODO: Rework rebounds
 fn handle_collisions(
     mut commands: Commands,
     ball: Single<(&mut Velocity, &Position, &Collider), With<Ball>>,
