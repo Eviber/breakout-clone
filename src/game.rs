@@ -24,7 +24,6 @@ mod ball {
             FixedUpdate,
             (
                 launch_ball.in_set(GameSystemSet::Input),
-                move_ball.in_set(GameSystemSet::Movement),
                 move_locked_ball.in_set(GameSystemSet::PostCollision),
                 handle_collisions.in_set(GameSystemSet::Collision),
                 handle_lost_ball.in_set(GameSystemSet::Collision),
@@ -103,11 +102,6 @@ mod ball {
             });
             break;
         }
-    }
-
-    fn move_ball(ball: Single<(&mut Position, &Velocity), (With<Ball>, Without<Paddle>)>) {
-        let (mut position, velocity) = ball.into_inner();
-        position.0 += velocity.0;
     }
 
     fn move_locked_ball(
@@ -205,7 +199,7 @@ pub fn plugin(app: &mut App) {
         (
             project_positions.in_set(GameSystemSet::Display),
             handle_player_input.in_set(GameSystemSet::Input),
-            move_paddle.in_set(GameSystemSet::Movement),
+            move_entities.in_set(GameSystemSet::Movement),
             constrain_paddle_position.in_set(GameSystemSet::PreCollision),
             set_win_state
                 .run_if(not(any_with_component::<Brick>))
@@ -401,9 +395,10 @@ fn handle_player_input(
     }
 }
 
-fn move_paddle(paddle: Single<(&mut Position, &Velocity), (With<Paddle>, Without<Ball>)>) {
-    let (mut position, velocity) = paddle.into_inner();
-    position.0 += velocity.0;
+fn move_entities(entities: Query<(&mut Position, &Velocity)>) {
+    for (mut position, velocity) in entities {
+        position.0 += velocity.0;
+    }
 }
 
 mod collision {
