@@ -161,11 +161,12 @@ struct Paddle;
 const PADDLE_SHAPE: Rectangle = Rectangle::new(100., 10.);
 const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
 const PADDLE_SPEED: f32 = 5.;
+const PADDLE_Y: f32 = -300.;
 
 impl Paddle {
     fn scene() -> impl Scene {
         let x = 0.;
-        let y = -300.;
+        let y = PADDLE_Y;
         bsn! {
             Position(vec2(x,y))
             Collider(PADDLE_SHAPE)
@@ -341,11 +342,10 @@ fn constrain_paddle_position(
 fn handle_lost_ball(
     mut commands: Commands,
     ball: Single<(Entity, &Position), With<Ball>>,
-    paddle_pos: Single<&Position, (With<Paddle>, Without<Ball>)>,
     mut lives: ResMut<Lives>,
 ) {
     let (ball_entity, ball_position) = ball.into_inner();
-    if ball_position.0.y < paddle_pos.0.y - 100. {
+    if ball_position.0.y < PADDLE_Y - 100. {
         lives.0 -= 1;
         commands.entity(ball_entity).remove::<Velocity>();
     }
