@@ -18,8 +18,37 @@ pub enum GameState {
 #[derive(Resource)]
 pub struct Lives(usize);
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameSystemSet {
+    Preload,
+    Input,
+    Movement,
+    Collision,
+    PostCollision,
+    Display,
+}
 
 pub fn plugin(app: &mut App) {
+    app.configure_sets(
+        OnEnter(AppState::MainMenu),
+        (
+            GameSystemSet::Preload,
+            GameSystemSet::PostCollision,
+            GameSystemSet::Display,
+        )
+            .chain(),
+    );
+    app.configure_sets(
+        FixedUpdate,
+        (
+            GameSystemSet::Input,
+            GameSystemSet::Movement,
+            GameSystemSet::Collision,
+            GameSystemSet::PostCollision,
+            GameSystemSet::Display,
+        )
+            .chain(),
+    );
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
         .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
@@ -27,9 +56,10 @@ pub fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(AppState::MainMenu),
         (
-            spawn_entities.before(project_positions),
-            spawn_bricks.before(project_positions),
-            project_positions,
+            spawn_entities.in_set(GameSystemSet::Preload),
+            spawn_bricks.in_set(GameSystemSet::Preload),
+            move_locked_ball.in_set(GameSystemSet::PostCollision),
+            project_positions.in_set(GameSystemSet::Display),
             init_resources,
         ),
     )
@@ -38,22 +68,29 @@ pub fn plugin(app: &mut App) {
         (
             update_lives_display.run_if(resource_changed::<Lives>),
             update_score_display.run_if(resource_changed::<Score>),
-        )
+        ),
     )
     .add_systems(
         FixedUpdate,
         (
-            project_positions,
-            launch_ball.before(move_ball),
-            move_ball.before(project_positions),
-            move_locked_ball.after(move_paddle).before(project_positions),
-            handle_collisions.after(move_ball),
-            handle_player_input.before(move_paddle),
-            move_paddle.before(project_positions),
-            constrain_paddle_position.after(move_paddle),
-            handle_lost_ball,
-            set_win_state.run_if(not(any_with_component::<Brick>)),
-            check_out_of_lives.run_if(resource_changed::<Lives>),
+            project_positions.in_set(GameSystemSet::Display),
+            launch_ball.in_set(GameSystemSet::Input),
+            move_ball.in_set(GameSystemSet::Movement),
+            move_locked_ball.in_set(GameSystemSet::PostCollision),
+            handle_collisions
+                .in_set(GameSystemSet::Collision)
+                .after(constrain_paddle_position),
+            handle_player_input.in_set(GameSystemSet::Input),
+            move_paddle.in_set(GameSystemSet::Movement),
+            constrain_paddle_position.in_set(GameSystemSet::Collision),
+            handle_lost_ball.in_set(GameSystemSet::Collision),
+            set_win_state
+                .run_if(not(any_with_component::<Brick>))
+                .in_set(GameSystemSet::PostCollision)
+                .ambiguous_with(check_out_of_lives),
+            check_out_of_lives
+                .run_if(resource_changed::<Lives>)
+                .in_set(GameSystemSet::PostCollision),
         )
             .run_if(in_state(GameState::Running)),
     )
