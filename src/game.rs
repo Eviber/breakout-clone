@@ -1,16 +1,128 @@
-use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
-use bevy::prelude::*;
+mod game_over;
+mod game_pause;
 
-use super::{GameState, Lives};
+use bevy::math::bounding::Aabb2d;
+use bevy::prelude::*;
 
 use crate::AppState;
 
-#[derive(Component, Clone, Default)]
-#[require(Transform)]
-struct Position(Vec2);
+#[derive(SubStates, Default, Debug, Hash, Eq, PartialEq, Clone)]
+#[source(AppState = AppState::InGame)]
+pub enum GameState {
+    #[default]
+    Running,
+    Paused,
+    GameOver,
+}
 
-#[derive(Component, Clone, Default)]
-struct Velocity(Vec2);
+#[derive(Resource)]
+pub struct Lives(usize);
+
+
+pub fn plugin(app: &mut App) {
+    app.add_plugins(game_pause::plugin)
+        .add_plugins(game_over::plugin)
+        .add_systems(OnEnter(AppState::InGame), game_ui.spawn())
+        .add_systems(Update, handle_input.run_if(in_state(GameState::Running)));
+    app.add_systems(
+        OnEnter(AppState::MainMenu),
+        (
+            spawn_entities.before(project_positions),
+            spawn_bricks.before(project_positions),
+            project_positions,
+            init_resources,
+        ),
+    )
+    .add_systems(
+        Update,
+        (
+            update_lives_display.run_if(resource_changed::<Lives>),
+            update_score_display.run_if(resource_changed::<Score>),
+        )
+    )
+    .add_systems(
+        FixedUpdate,
+        (
+            project_positions,
+            launch_ball.before(move_ball),
+            move_ball.before(project_positions),
+            move_locked_ball.after(move_paddle).before(project_positions),
+            handle_collisions.after(move_ball),
+            handle_player_input.before(move_paddle),
+            move_paddle.before(project_positions),
+            constrain_paddle_position.after(move_paddle),
+            handle_lost_ball,
+            set_win_state.run_if(not(any_with_component::<Brick>)),
+            check_out_of_lives.run_if(resource_changed::<Lives>),
+        )
+            .run_if(in_state(GameState::Running)),
+    )
+    .add_observer(destroy_brick);
+}
+
+fn handle_input(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+    if input.just_pressed(KeyCode::Escape) {
+        next_state.set(GameState::Paused);
+    }
+}
+
+#[derive(Component, Default, Clone, Copy)]
+struct LivesDisplay;
+
+#[derive(Component, Default, Clone, Copy)]
+struct ScoreDisplay;
+
+fn game_ui() -> impl Scene {
+    bsn! {
+        Node {
+            width: percent(100),
+            // height: percent(100),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::FlexEnd,
+        }
+        DespawnOnExit<AppState>(AppState::InGame)
+        Children [
+            (
+                ScoreDisplay
+                Text::new(format!("{} points", 0))
+            ),
+            (
+                LivesDisplay
+                Text::new(format!("{} lives", 3))
+                // TextColor(Color::BLACK)
+                // TextLayout::justify(Justify::Center)
+            ),
+        ]
+    }
+}
+
+mod physics {
+    use bevy::prelude::*;
+
+    #[derive(Component, Clone, Default)]
+    #[require(Transform)]
+    pub struct Position(pub Vec2);
+
+    #[derive(Component, Clone, Default)]
+    pub struct Velocity(pub Vec2);
+
+    #[derive(Component, Clone, Default)]
+    pub struct Collider(pub Rectangle);
+
+    impl Collider {
+        pub fn half_size(&self) -> Vec2 {
+            self.0.half_size
+        }
+    }
+
+    pub fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
+        for (mut transform, position) in &mut positionables {
+            transform.translation = position.0.extend(0.);
+        }
+    }
+}
+
+use physics::{Collider, Position, Velocity, project_positions};
 
 #[derive(EntityEvent)]
 struct BrickDestroyed {
@@ -19,15 +131,6 @@ struct BrickDestroyed {
 
 #[derive(Resource)]
 struct Score(u32);
-
-#[derive(Component, Clone, Default)]
-struct Collider(Rectangle);
-
-impl Collider {
-    fn half_size(&self) -> Vec2 {
-        self.0.half_size
-    }
-}
 
 #[derive(SceneComponent, Clone, Default)]
 struct Ball;
@@ -90,14 +193,6 @@ fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-enum Collision {
-    Left,
-    Right,
-    Top,
-    Bottom,
-}
-
 #[derive(Component, Clone, Default)]
 #[require(Position, Collider)]
 struct Brick;
@@ -127,43 +222,6 @@ fn spawn_bricks(mut commands: Commands) {
     }
 }
 
-pub fn plugin(app: &mut App) {
-    app.add_systems(
-        OnEnter(AppState::MainMenu),
-        (
-            spawn_entities.before(project_positions),
-            spawn_bricks.before(project_positions),
-            project_positions,
-            init_resources,
-        ),
-    )
-    .add_systems(
-        Update,
-        (
-            update_lives_display.run_if(resource_changed::<Lives>),
-            update_score_display.run_if(resource_changed::<Score>),
-        )
-    )
-    .add_systems(
-        FixedUpdate,
-        (
-            project_positions,
-            launch_ball.before(move_ball),
-            move_ball.before(project_positions),
-            move_locked_ball.after(move_paddle).before(project_positions),
-            handle_collisions.after(move_ball),
-            handle_player_input.before(move_paddle),
-            move_paddle.before(project_positions),
-            constrain_paddle_position.after(move_paddle),
-            handle_lost_ball,
-            set_win_state.run_if(not(any_with_component::<Brick>)),
-            check_out_of_lives.run_if(resource_changed::<Lives>),
-        )
-            .run_if(in_state(GameState::Running)),
-    )
-    .add_observer(destroy_brick);
-}
-
 fn init_resources(mut commands: Commands) {
     commands.insert_resource(Lives(3));
     commands.insert_resource(Score(0));
@@ -175,14 +233,10 @@ fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<L
     }
 }
 
-use super::LivesDisplay;
-
 fn update_lives_display(mut text: Single<&mut Text, With<LivesDisplay>>, lives: Res<Lives>) {
     info!("Lives updated: {}", lives.0);
     text.0 = format!("{} lives", lives.0);
 }
-
-use super::ScoreDisplay;
 
 fn update_score_display(mut text: Single<&mut Text, With<ScoreDisplay>>, score: Res<Score>) {
     info!("Score updated: {}", score.0);
@@ -206,7 +260,11 @@ fn handle_player_input(
     }
 }
 
-fn launch_ball(mut commands: Commands, keyboard_input: Res<ButtonInput<KeyCode>>, ball: Single<Entity, (With<Ball>, Without<Velocity>)>) {
+fn launch_ball(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
+) {
     if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
         commands.entity(*ball).insert(Velocity(BALL_BASE_VELOCITY));
     }
@@ -217,29 +275,41 @@ fn move_paddle(paddle: Single<(&mut Position, &Velocity), With<Paddle>>) {
     position.0 += velocity.0;
 }
 
-// Returns `Some` if `ball` collides with `wall`. The returned `Collision` is the
-// side of `wall` that `ball` hit.
-fn collide_with_side(ball: Aabb2d, wall: Aabb2d) -> Option<Collision> {
-    if !ball.intersects(&wall) {
-        return None;
+mod collision {
+    use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
+
+    #[derive(Debug, PartialEq, Eq, Copy, Clone)]
+    pub enum Collision {
+        Left,
+        Right,
+        Top,
+        Bottom,
     }
 
-    let closest_point = wall.closest_point(ball.center());
-    let offset = ball.center() - closest_point;
-
-    let side = if offset.x.abs() > offset.y.abs() {
-        if offset.x < 0. {
-            Collision::Left
-        } else {
-            Collision::Right
+    // Returns `Some` if `ball` collides with `wall`. The returned `Collision` is the
+    // side of `wall` that `ball` hit.
+    pub fn collide_with_side(ball: Aabb2d, wall: Aabb2d) -> Option<Collision> {
+        if !ball.intersects(&wall) {
+            return None;
         }
-    } else if offset.y > 0. {
-        Collision::Top
-    } else {
-        Collision::Bottom
-    };
 
-    Some(side)
+        let closest_point = wall.closest_point(ball.center());
+        let offset = ball.center() - closest_point;
+
+        let side = if offset.x.abs() > offset.y.abs() {
+            if offset.x < 0. {
+                Collision::Left
+            } else {
+                Collision::Right
+            }
+        } else if offset.y > 0. {
+            Collision::Top
+        } else {
+            Collision::Bottom
+        };
+
+        Some(side)
+    }
 }
 
 fn constrain_paddle_position(
@@ -251,14 +321,14 @@ fn constrain_paddle_position(
         let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
         let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
 
-        if let Some(collision) = collide_with_side(paddle_aabb, gutter_aabb) {
+        if let Some(collision) = collision::collide_with_side(paddle_aabb, gutter_aabb) {
             match collision {
-                Collision::Left => {
+                collision::Collision::Left => {
                     paddle_position.0.x = gutter_position.0.x
                         - gutter_collider.half_size().x
                         - paddle_collider.half_size().x;
                 }
-                Collision::Right => {
+                collision::Collision::Right => {
                     paddle_position.0.x = gutter_position.0.x
                         + gutter_collider.half_size().x
                         + paddle_collider.half_size().x;
@@ -296,7 +366,7 @@ fn handle_collisions(
     let mut has_despawned = false;
 
     for (other_position, other_collider, is_paddle, is_brick, entity) in &other_things {
-        let Some(collision) = collide_with_side(
+        let Some(collision) = collision::collide_with_side(
             Aabb2d::new(ball_position.0, ball_collider.half_size()),
             Aabb2d::new(other_position.0, other_collider.half_size()),
         ) else {
@@ -315,10 +385,10 @@ fn handle_collisions(
             continue;
         }
         match collision {
-            Collision::Left | Collision::Right => {
+            collision::Collision::Left | collision::Collision::Right => {
                 ball_velocity.0.x *= -1.;
             }
-            Collision::Top | Collision::Bottom => {
+            collision::Collision::Top | collision::Collision::Bottom => {
                 ball_velocity.0.y *= -1.;
             }
         }
@@ -354,10 +424,4 @@ fn spawn_entities(mut commands: Commands, window: Single<&Window>) {
         gutter(-half_width, 0., shape_v),
         gutter(0., half_height, shape_h),
     ]);
-}
-
-fn project_positions(mut positionables: Query<(&mut Transform, &Position)>) {
-    for (mut transform, position) in &mut positionables {
-        transform.translation = position.0.extend(0.);
-    }
 }
