@@ -370,6 +370,7 @@ pub fn plugin(app: &mut App) {
     );
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
+        .add_plugins(physics::plugin)
         .add_plugins(ball::plugin)
         .add_plugins(paddle::plugin)
         .add_plugins(blocks::plugin)
@@ -395,7 +396,6 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (
             project_positions.in_set(GameSystemSet::Display),
-            move_entities.in_set(GameSystemSet::Movement),
             set_win_state
                 .run_if(not(any_with_component::<Brick>))
                 .in_set(GameSystemSet::PostCollision)
@@ -447,6 +447,12 @@ fn game_ui() -> impl Scene {
 mod physics {
     use bevy::prelude::*;
 
+    use super::GameSystemSet;
+
+    pub fn plugin(app: &mut App) {
+        app.add_systems(FixedUpdate, move_entities.in_set(GameSystemSet::Movement));
+    }
+
     #[derive(Component, Clone, Default)]
     #[require(Transform)]
     pub struct Position(pub Vec2);
@@ -468,9 +474,15 @@ mod physics {
             transform.translation = position.0.extend(0.);
         }
     }
+
+    fn move_entities(entities: Query<(&mut Position, &Velocity)>) {
+        for (mut position, velocity) in entities {
+            position.0 += velocity.0;
+        }
+    }
 }
 
-use physics::{Position, Velocity, project_positions};
+use physics::project_positions;
 
 #[derive(Resource)]
 struct Score(u32);
@@ -508,12 +520,6 @@ fn update_score_display(mut text: Single<&mut Text, With<ScoreDisplay>>, score: 
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::GameOver);
-}
-
-fn move_entities(entities: Query<(&mut Position, &Velocity)>) {
-    for (mut position, velocity) in entities {
-        position.0 += velocity.0;
-    }
 }
 
 mod collision {
