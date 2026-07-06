@@ -7,6 +7,7 @@ mod hud;
 mod level;
 mod paddle;
 mod physics;
+mod sfx;
 
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::prelude::*;
@@ -71,6 +72,7 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(game_pause::plugin)
         .add_plugins(game_over::plugin)
         .add_plugins(hud::plugin)
+        .add_plugins(sfx::plugin)
         .add_plugins(physics::plugin)
         .add_plugins(ball::plugin)
         .add_plugins(paddle::plugin)
