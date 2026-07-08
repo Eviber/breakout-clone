@@ -18,6 +18,7 @@ pub const GUTTER_WIDTH: f32 = 20.;
 
 pub fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
     bsn! {
+        Name("Gutter")
         Gutter
         Position(vec2(x, y))
         Collider(shape)
@@ -53,6 +54,7 @@ const BRICK_SHAPE: Rectangle = Rectangle::new(60., 20.);
 
 pub fn brick(x: f32, y: f32) -> impl Scene {
     bsn! {
+        Name("Brick")
         Brick
         Position(vec2(x, y))
         Collider(BRICK_SHAPE)

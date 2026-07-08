@@ -45,6 +45,7 @@ pub const BALL_BASE_VELOCITY: Vec2 = vec2(0., BALL_SPEED);
 impl Ball {
     pub fn scene() -> impl Scene {
         bsn! {
+            Name("Ball")
             Position(BALL_BASE_POS)
             Collider(Rectangle::new(BALL_SIZE, BALL_SIZE))
             Mesh2d(asset_value(BALL_SHAPE))

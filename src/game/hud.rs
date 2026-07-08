@@ -22,6 +22,7 @@ struct ScoreDisplay;
 
 fn game_ui() -> impl Scene {
     bsn! {
+        Name("Game UI")
         Node {
             width: percent(100),
             // height: percent(100),
@@ -31,10 +32,12 @@ fn game_ui() -> impl Scene {
         DespawnOnExit<AppState>(AppState::InGame)
         Children [
             (
+                Name("Score Node")
                 ScoreDisplay
                 Text::new(format!("{} points", 0))
             ),
             (
+                Name("Lives Node")
                 LivesDisplay
                 Text::new(format!("{} lives", 3))
                 // TextColor(Color::BLACK)

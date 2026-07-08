@@ -34,6 +34,7 @@ impl Paddle {
         let x = 0.;
         let y = PADDLE_Y;
         bsn! {
+            Name("Paddle")
             Position(vec2(x,y))
             Collider(PADDLE_SHAPE)
             Mesh2d(asset_value(PADDLE_SHAPE))

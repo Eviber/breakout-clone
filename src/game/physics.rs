@@ -17,14 +17,14 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Clone, Default)]
+#[derive(Component, Clone, Default, Reflect)]
 #[require(Transform)]
 pub struct Position(pub Vec2);
 
-#[derive(Component, Clone, Default)]
+#[derive(Component, Clone, Default, Reflect)]
 pub struct Velocity(pub Vec2);
 
-#[derive(Component, Clone, Default)]
+#[derive(Component, Clone, Default, Reflect)]
 pub struct Collider(pub Rectangle);
 
 impl Collider {
