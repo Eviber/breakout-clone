@@ -10,8 +10,8 @@ use super::ball::BallCollision;
 const BEEP_LENGTH_MS: u32 = 100;
 const BEEP_VOLUME: Volume = Volume::Linear(0.2);
 const ROOT_FREQ: f32 = 150.0;
-// TODO: Pentatonic?
-const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
+// const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
+const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
@@ -24,11 +24,11 @@ fn rand64() -> u64 {
 }
 
 fn random_note() -> f32 {
-    let total_notes = SCALE.len() as u64;
+    let total_notes = PENTATONIC_SCALE.len() as u64;
 
     let idx = rand64() % total_notes;
 
-    let semitone_offset = SCALE[idx as usize];
+    let semitone_offset = PENTATONIC_SCALE[idx as usize];
 
     ROOT_FREQ * 2f32.powf(semitone_offset as f32 / 12.0)
 }
