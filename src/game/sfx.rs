@@ -9,7 +9,7 @@ use super::ball::BallCollision;
 
 const BEEP_LENGTH_MS: u32 = 100;
 const BEEP_VOLUME: Volume = Volume::Linear(0.2);
-const ROOT_FREQ: f32 = 150.0;
+const ROOT_FREQ: f32 = 144. * 2.;
 // const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
 const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
