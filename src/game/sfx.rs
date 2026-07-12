@@ -13,6 +13,10 @@ const ROOT_FREQ: f32 = 144. * 2.;
 // const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
 const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
+// TODO: Music
+// TODO: Brick breaking sound
+// TODO: Forbid repeating sounds?
+
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
     app.add_systems(Update, fade_sounds);
