@@ -15,6 +15,7 @@ const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
+    app.add_systems(Update, fade_sounds);
 }
 
 /// Eheheheh 😈
@@ -42,7 +43,28 @@ fn play_hit_sound(_event: On<BallCollision>, mut commands: Commands) {
         )))
         PlaybackSettings {
             mode: PlaybackMode::Despawn,
-            volume: BEEP_VOLUME,
+            volume: Volume::SILENT,
         }
+        Fade
     });
+}
+
+#[derive(Component, Clone, Copy, Default)]
+struct Fade(f32);
+
+fn fade_sounds(
+    mut commands: Commands,
+    mut audio_sink: Query<(&mut AudioSink, &mut Fade, Entity)>,
+    time: Res<Time>,
+) {
+    for (mut audio, mut fade, entity) in audio_sink.iter_mut() {
+        fade.0 += time.delta_secs_f64() as f32;
+        // f(x) = -4/(k^(2)) x (x-k)
+        let lerper = -4. / (BEEP_LENGTH * BEEP_LENGTH) * fade.0 * (fade.0 - BEEP_LENGTH);
+        audio.set_volume(Volume::SILENT.fade_towards(BEEP_VOLUME, lerper));
+        if time.delta().as_secs_f32() >= BEEP_LENGTH {
+            audio.set_volume(Volume::Linear(0.0));
+            commands.entity(entity).despawn();
+        }
+    }
 }
