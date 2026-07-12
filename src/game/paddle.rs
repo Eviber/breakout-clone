@@ -85,7 +85,6 @@ fn constrain_paddle_position(
     }
 }
 
-// TODO: Rework rebounds
 fn collide_paddle(
     _event: On<BallCollision>,
     ball: Single<(&mut Velocity, &Position), With<Ball>>,
@@ -93,6 +92,12 @@ fn collide_paddle(
 ) {
     let (mut ball_velocity, ball_position) = ball.into_inner();
     let (paddle_position, paddle_collider) = *paddle;
+    let x1 = paddle_position.0.x - (paddle_collider.0.half_size.x * 3. / 4.);
+    let x2 = paddle_position.0.x + (paddle_collider.0.half_size.x * 3. / 4.);
+    if x1 <= ball_position.0.x && ball_position.0.x <= x2 {
+        ball_velocity.0.y = -ball_velocity.0.y;
+        return;
+    }
     let paddle_pos = Vec2 {
         x: paddle_position.0.x,
         y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
