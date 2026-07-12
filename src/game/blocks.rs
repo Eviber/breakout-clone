@@ -50,7 +50,7 @@ pub struct BrickDestroyed {
 pub struct Brick;
 
 const BRICK_COLOR: Color = Color::srgb(1., 1., 1.);
-const BRICK_SHAPE: Rectangle = Rectangle::new(60., 20.);
+const BRICK_SHAPE: Rectangle = Rectangle::new(80., 20.);
 
 pub fn brick(x: f32, y: f32) -> impl Scene {
     bsn! {
