@@ -7,7 +7,7 @@ use bevy::{
 
 use super::ball::BallCollision;
 
-const BEEP_LENGTH_MS: u32 = 100;
+const BEEP_LENGTH: f32 = 0.1;
 const BEEP_VOLUME: Volume = Volume::Linear(0.2);
 const ROOT_FREQ: f32 = 144. * 2.;
 // const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
@@ -38,7 +38,7 @@ fn play_hit_sound(_event: On<BallCollision>, mut commands: Commands) {
     commands.spawn_scene(bsn! {
         AudioPlayer<Pitch>(asset_value(Pitch::new(
             pitch,
-            Duration::new(0, BEEP_LENGTH_MS * 1_000_000),
+            Duration::from_secs_f32(BEEP_LENGTH),
         )))
         PlaybackSettings {
             mode: PlaybackMode::Despawn,
