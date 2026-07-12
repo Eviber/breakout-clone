@@ -24,7 +24,7 @@ pub fn plugin(app: &mut App) {
 #[require(Velocity)]
 pub struct Paddle;
 
-pub const PADDLE_SHAPE: Rectangle = Rectangle::new(100., 10.);
+pub const PADDLE_SHAPE: Rectangle = Rectangle::new(150., 20.);
 pub const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
 pub const PADDLE_SPEED: f32 = 5.;
 pub const PADDLE_Y: f32 = -300.;
