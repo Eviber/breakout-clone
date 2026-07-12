@@ -85,6 +85,7 @@ fn constrain_paddle_position(
     }
 }
 
+// TODO: Add ball effect
 fn collide_paddle(
     _event: On<BallCollision>,
     ball: Single<(&mut Velocity, &Position), With<Ball>>,

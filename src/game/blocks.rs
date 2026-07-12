@@ -65,11 +65,13 @@ pub fn brick(x: f32, y: f32) -> impl Scene {
     }
 }
 
+// TODO: Add combo mechanic? Do the paddle resets the combo, or only losing a life?
 fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
     commands.entity(event.entity).despawn();
     score.0 += 10;
 }
 
+// TODO: Add angle collision
 fn collide_brick(
     event: On<BallCollision>,
     mut commands: Commands,

@@ -77,6 +77,7 @@ fn handle_lost_ball(
     }
 }
 
+// TODO: Count multiple collisions in the same tick, except for bricks
 fn handle_collisions(
     mut commands: Commands,
     ball: Single<(&Position, &Collider), With<Ball>>,
