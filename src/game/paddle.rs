@@ -85,18 +85,24 @@ fn constrain_paddle_position(
     }
 }
 
-// TODO: Add ball effect
 fn collide_paddle(
     _event: On<BallCollision>,
     ball: Single<(&mut Velocity, &Position), With<Ball>>,
-    paddle: Single<(&Position, &Collider), (With<Paddle>, Without<Ball>)>,
+    paddle: Single<(&Position, &Collider, &Velocity), (With<Paddle>, Without<Ball>)>,
 ) {
     let (mut ball_velocity, ball_position) = ball.into_inner();
-    let (paddle_position, paddle_collider) = *paddle;
+    let (paddle_position, paddle_collider, paddle_velocity) = *paddle;
     let x1 = paddle_position.0.x - (paddle_collider.0.half_size.x * 3. / 4.);
     let x2 = paddle_position.0.x + (paddle_collider.0.half_size.x * 3. / 4.);
     if x1 <= ball_position.0.x && ball_position.0.x <= x2 {
         ball_velocity.0.y = -ball_velocity.0.y;
+        if paddle_velocity.0.x < 0. {
+            let angle = 5f32.to_radians();
+            ball_velocity.0 = Vec2::from_angle(angle).rotate(ball_velocity.0);
+        } else if paddle_velocity.0.x > 0. {
+            let angle = -5f32.to_radians();
+            ball_velocity.0 = Vec2::from_angle(angle).rotate(ball_velocity.0);
+        }
         return;
     }
     let paddle_pos = Vec2 {
