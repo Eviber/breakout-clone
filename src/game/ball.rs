@@ -59,9 +59,17 @@ fn launch_ball(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
+    paddle_velocity: Single<&Velocity, With<Paddle>>,
 ) {
     if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
-        commands.entity(*ball).insert(Velocity(BALL_BASE_VELOCITY));
+        let mut ball_velocity = BALL_BASE_VELOCITY;
+        let angle = if paddle_velocity.0.x < 0. {
+            45f32.to_radians()
+        } else {
+            -45f32.to_radians()
+        };
+        ball_velocity = Vec2::from_angle(angle).rotate(ball_velocity);
+        commands.entity(*ball).insert(Velocity(ball_velocity));
     }
 }
 
