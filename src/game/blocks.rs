@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::Score;
-use super::ball::{Ball, BallCollision};
+use super::ball::{BALL_SPEED, Ball, BallCollision};
 use super::collision;
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
@@ -83,6 +83,9 @@ fn collide_brick(
             ball_velocity.0.y *= -1.;
         }
     }
+    let len = ball_velocity.0.length() + BALL_SPEED * 0.1;
+    ball_velocity.0 = ball_velocity.0.clamp_length_min(len);
+    info!("Speed: {len}");
     commands.trigger(BrickDestroyed {
         entity: event.entity,
     });

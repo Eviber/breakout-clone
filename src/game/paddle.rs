@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::GameState;
 use super::GameSystemSet;
-use super::ball::{self, Ball, BallCollision};
+use super::ball::{Ball, BallCollision};
 use super::blocks::Gutter;
 use super::collision;
 use super::physics::{Collider, Position, Velocity};
@@ -98,5 +98,6 @@ fn collide_paddle(
         y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
     };
     let dir = (ball_position.0 - paddle_pos).normalize();
-    ball_velocity.0 = dir * ball::BALL_SPEED;
+    let speed = ball_velocity.0.length();
+    ball_velocity.0 = dir * speed;
 }
