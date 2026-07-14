@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::GameState;
 use super::GameSystemSet;
-use super::ball::{Ball, BallCollision};
+use super::ball::{Ball, BallCollision, LaunchRequested};
 use super::blocks::Gutter;
 use super::collision;
 use super::physics::{Collider, Position, Velocity};
@@ -46,6 +46,7 @@ impl Paddle {
 }
 
 fn handle_player_input(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
 ) {
@@ -55,6 +56,9 @@ fn handle_player_input(
         paddle_velocity.0.x = PADDLE_SPEED;
     } else {
         paddle_velocity.0.x = 0.;
+    }
+    if keyboard_input.pressed(KeyCode::ArrowUp) {
+        commands.trigger(LaunchRequested { x_speed: paddle_velocity.0.x });
     }
 }
 

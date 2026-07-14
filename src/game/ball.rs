@@ -17,13 +17,13 @@ pub fn plugin(app: &mut App) {
     .add_systems(
         FixedUpdate,
         (
-            launch_ball.in_set(GameSystemSet::Input),
             move_locked_ball.in_set(GameSystemSet::PostCollision),
             handle_collisions.in_set(GameSystemSet::Collision),
             handle_lost_ball.in_set(GameSystemSet::Collision),
         )
             .run_if(in_state(GameState::Running)),
-    );
+    )
+    .add_observer(launch_ball);
 }
 
 #[derive(EntityEvent)]
@@ -55,15 +55,20 @@ impl Ball {
     }
 }
 
+#[derive(Event)]
+pub struct LaunchRequested {
+    pub x_speed: f32,
+}
+
 fn launch_ball(
+    event: On<LaunchRequested>,
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
-    paddle_velocity: Single<&Velocity, With<Paddle>>,
 ) {
     if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
         let mut ball_velocity = BALL_BASE_VELOCITY;
-        let angle = if paddle_velocity.0.x < 0. {
+        let angle = if event.x_speed < 0. {
             45f32.to_radians()
         } else {
             -45f32.to_radians()
