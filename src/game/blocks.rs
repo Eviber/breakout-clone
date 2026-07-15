@@ -62,6 +62,7 @@ pub struct Brick;
 const BRICK_COLOR: Color = Color::srgb(1., 1., 1.);
 const BRICK_SHAPE: Rectangle = Rectangle::new(80., 20.);
 
+// TODO: Add different brick types (e.g. multi-hit)
 pub fn brick(x: f32, y: f32) -> impl Scene {
     bsn! {
         Name("Brick")
@@ -76,6 +77,9 @@ pub fn brick(x: f32, y: f32) -> impl Scene {
 }
 
 // TODO: Add combo mechanic? Do the paddle resets the combo, or only losing a life?
+// TODO: Add brick destruction sfx
+// TODO: Add brick destruction vfx (particles, screen shake, etc.)
+// TODO: Add brick destruction freeze frame
 fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
     commands.entity(event.entity).despawn();
     score.0 += 10;
