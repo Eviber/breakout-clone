@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::Score;
-use super::ball::{BALL_SPEED, Ball, BallCollision};
+use super::ball::{BALL_SPEED, Ball, BallCollision, BallMoved};
 use super::collision;
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
@@ -44,7 +44,7 @@ fn collide_gutter(
         }
     }
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
-    commands.trigger(super::ball::BallMoved {
+    commands.trigger(BallMoved {
         from: event.pos,
         rebound_from: Some(event.entity),
     });
@@ -97,7 +97,7 @@ fn collide_brick(
         }
     }
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
-    commands.trigger(super::ball::BallMoved {
+    commands.trigger(BallMoved {
         from: event.pos,
         rebound_from: Some(event.entity),
     });
