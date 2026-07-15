@@ -45,6 +45,9 @@ impl Paddle {
     }
 }
 
+// TODO: Add mouse input
+// TODO: Add vertical paddle movement
+// TODO: Add paddle inclination based on movement?
 fn handle_player_input(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
