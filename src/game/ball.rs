@@ -39,6 +39,7 @@ pub struct BallCollision {
 #[derive(Event)]
 pub struct BallMoved {
     pub from: Vec2,
+    pub rebound_from: Option<Entity>,
 }
 
 #[derive(SceneComponent, Clone, Default)]
@@ -102,7 +103,10 @@ fn handle_lost_ball(
 fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity), With<Ball>>) {
     let (ball_position, ball_velocity) = ball.into_inner();
     let old_pos = ball_position.0 - ball_velocity.0;
-    commands.trigger(BallMoved { from: old_pos });
+    commands.trigger(BallMoved {
+        from: old_pos,
+        rebound_from: None,
+    });
 }
 
 fn handle_collisions(
@@ -120,6 +124,10 @@ fn handle_collisions(
     let mut closest_collision: Option<BallCollision> = None;
 
     for (other_position, other_collider, entity) in &other_things {
+        if event.rebound_from.is_some_and(|e| e == entity) {
+            // Do not collide with the entity we just collided with.
+            continue;
+        }
         let w = (other_collider.0.half_size.x + BALL_SIZE) * 2.;
         let h = (other_collider.0.half_size.y + BALL_SIZE) * 2.;
         let other_collider = Rectangle::new(w, h);

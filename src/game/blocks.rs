@@ -44,6 +44,10 @@ fn collide_gutter(
         }
     }
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
+    commands.trigger(super::ball::BallMoved {
+        from: event.pos,
+        rebound_from: Some(event.entity),
+    });
 }
 
 #[derive(EntityEvent)]
@@ -93,6 +97,10 @@ fn collide_brick(
         }
     }
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
+    commands.trigger(super::ball::BallMoved {
+        from: event.pos,
+        rebound_from: Some(event.entity),
+    });
     let len = ball_velocity.0.length() + BALL_SPEED * 0.1;
     ball_velocity.0 = ball_velocity.0.clamp_length_min(len);
     info!("Speed: {len}");

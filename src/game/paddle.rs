@@ -93,6 +93,7 @@ fn constrain_paddle_position(
 
 fn collide_paddle(
     event: On<BallCollision>,
+    mut commands: Commands,
     ball: Single<(&mut Velocity, &mut Position), With<Ball>>,
     paddle: Single<(&Position, &Collider, &Velocity), (With<Paddle>, Without<Ball>)>,
 ) {
@@ -119,4 +120,8 @@ fn collide_paddle(
         ball_velocity.0 = dir * speed;
     }
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
+    commands.trigger(super::ball::BallMoved {
+        from: event.pos,
+        rebound_from: Some(event.entity),
+    });
 }
