@@ -1,4 +1,5 @@
 use bevy::math::bounding::Aabb2d;
+use bevy::math::bounding::RayCast2d;
 use bevy::prelude::*;
 
 use super::GameState;
@@ -18,18 +19,26 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         (
             move_locked_ball.in_set(GameSystemSet::PostCollision),
-            handle_collisions.in_set(GameSystemSet::Collision),
+            trigger_ball_moved.in_set(GameSystemSet::Collision),
             handle_lost_ball.in_set(GameSystemSet::Collision),
         )
             .run_if(in_state(GameState::Running)),
     )
-    .add_observer(launch_ball);
+    .add_observer(launch_ball)
+    .add_observer(handle_collisions);
 }
 
 #[derive(EntityEvent)]
 pub struct BallCollision {
     pub entity: Entity,
     pub side: collision::Collision,
+    pub pos: Vec2,
+    pub remaining_distance: f32,
+}
+
+#[derive(Event)]
+pub struct BallMoved {
+    pub from: Vec2,
 }
 
 #[derive(SceneComponent, Clone, Default)]
@@ -90,26 +99,65 @@ fn handle_lost_ball(
     }
 }
 
-// TODO: Count multiple collisions in the same tick, except for bricks
+fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity), With<Ball>>) {
+    let (ball_position, ball_velocity) = ball.into_inner();
+    let old_pos = ball_position.0 - ball_velocity.0;
+    commands.trigger(BallMoved { from: old_pos });
+}
+
 fn handle_collisions(
+    event: On<BallMoved>,
     mut commands: Commands,
-    ball: Single<(&Position, &Collider), With<Ball>>,
+    ball: Single<&Position, With<Ball>>,
     other_things: Query<(&Position, &Collider, Entity), Without<Ball>>,
 ) {
-    let (ball_position, ball_collider) = ball.into_inner();
+    let ball_position = ball.into_inner();
+    let old_pos = event.from;
+    let dir = Dir2::new(ball_position.0 - old_pos).unwrap();
+    let speed = (ball_position.0 - old_pos).length();
+    let ray_cast = RayCast2d::new(old_pos, dir, speed);
+
+    let mut closest_collision: Option<BallCollision> = None;
 
     for (other_position, other_collider, entity) in &other_things {
-        let Some(collision) = collision::collide_with_side(
-            Aabb2d::new(ball_position.0, ball_collider.half_size()),
-            Aabb2d::new(other_position.0, other_collider.half_size()),
-        ) else {
-            continue;
-        };
-        commands.trigger(BallCollision {
-            entity,
-            side: collision,
-        });
-        break;
+        let w = (other_collider.0.half_size.x + BALL_SIZE) * 2.;
+        let h = (other_collider.0.half_size.y + BALL_SIZE) * 2.;
+        let other_collider = Rectangle::new(w, h);
+        let other_collider = Aabb2d::new(other_position.0, other_collider.half_size);
+
+        if let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) {
+            let collision_point = old_pos + dir * dist;
+            let collision = if other_collider.min.x < collision_point.x
+                && collision_point.x < other_collider.max.x
+            {
+                if other_collider.min.y < collision_point.y {
+                    collision::Collision::Top
+                } else {
+                    collision::Collision::Bottom
+                }
+            } else {
+                if other_collider.min.x < collision_point.x {
+                    collision::Collision::Right
+                } else {
+                    collision::Collision::Left
+                }
+            };
+
+            if closest_collision
+                .as_ref()
+                .is_none_or(|c| c.remaining_distance > speed - dist)
+            {
+                closest_collision = Some(BallCollision {
+                    entity,
+                    side: collision,
+                    pos: collision_point,
+                    remaining_distance: speed - dist,
+                });
+            };
+        }
+    }
+    if let Some(collision) = closest_collision {
+        commands.trigger(collision);
     }
 }
 
@@ -117,5 +165,5 @@ fn move_locked_ball(
     mut ball: Single<&mut Position, (With<Ball>, Without<Velocity>)>,
     paddle: Single<&Position, (With<Paddle>, Without<Ball>)>,
 ) {
-    ball.0 = paddle.0 + vec2(0., 20.);
+    ball.0 = paddle.0 + vec2(0., 25.);
 }

@@ -29,7 +29,12 @@ pub fn gutter(x: f32, y: f32, shape: Rectangle) -> impl Scene {
     }
 }
 
-fn collide_gutter(event: On<BallCollision>, mut ball_velocity: Single<&mut Velocity, With<Ball>>) {
+fn collide_gutter(
+    event: On<BallCollision>,
+    mut commands: Commands,
+    ball: Single<(&mut Position, &mut Velocity), With<Ball>>,
+) {
+    let (mut ball_position, mut ball_velocity) = ball.into_inner();
     match event.side {
         collision::Collision::Left | collision::Collision::Right => {
             ball_velocity.0.x *= -1.;
@@ -38,6 +43,7 @@ fn collide_gutter(event: On<BallCollision>, mut ball_velocity: Single<&mut Veloc
             ball_velocity.0.y *= -1.;
         }
     }
+    ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
 }
 
 #[derive(EntityEvent)]
@@ -75,8 +81,9 @@ fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: R
 fn collide_brick(
     event: On<BallCollision>,
     mut commands: Commands,
-    mut ball_velocity: Single<&mut Velocity, With<Ball>>,
+    ball: Single<(&mut Position, &mut Velocity), With<Ball>>,
 ) {
+    let (mut ball_position, mut ball_velocity) = ball.into_inner();
     match event.side {
         collision::Collision::Left | collision::Collision::Right => {
             ball_velocity.0.x *= -1.;
@@ -85,6 +92,7 @@ fn collide_brick(
             ball_velocity.0.y *= -1.;
         }
     }
+    ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
     let len = ball_velocity.0.length() + BALL_SPEED * 0.1;
     ball_velocity.0 = ball_velocity.0.clamp_length_min(len);
     info!("Speed: {len}");

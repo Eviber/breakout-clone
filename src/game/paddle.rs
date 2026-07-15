@@ -58,7 +58,9 @@ fn handle_player_input(
         paddle_velocity.0.x = 0.;
     }
     if keyboard_input.pressed(KeyCode::ArrowUp) {
-        commands.trigger(LaunchRequested { x_speed: paddle_velocity.0.x });
+        commands.trigger(LaunchRequested {
+            x_speed: paddle_velocity.0.x,
+        });
     }
 }
 
@@ -90,11 +92,11 @@ fn constrain_paddle_position(
 }
 
 fn collide_paddle(
-    _event: On<BallCollision>,
-    ball: Single<(&mut Velocity, &Position), With<Ball>>,
+    event: On<BallCollision>,
+    ball: Single<(&mut Velocity, &mut Position), With<Ball>>,
     paddle: Single<(&Position, &Collider, &Velocity), (With<Paddle>, Without<Ball>)>,
 ) {
-    let (mut ball_velocity, ball_position) = ball.into_inner();
+    let (mut ball_velocity, mut ball_position) = ball.into_inner();
     let (paddle_position, paddle_collider, paddle_velocity) = *paddle;
     let x1 = paddle_position.0.x - (paddle_collider.0.half_size.x * 3. / 4.);
     let x2 = paddle_position.0.x + (paddle_collider.0.half_size.x * 3. / 4.);
@@ -107,13 +109,14 @@ fn collide_paddle(
             let angle = -5f32.to_radians();
             ball_velocity.0 = Vec2::from_angle(angle).rotate(ball_velocity.0);
         }
-        return;
+    } else {
+        let paddle_pos = Vec2 {
+            x: paddle_position.0.x,
+            y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
+        };
+        let dir = (ball_position.0 - paddle_pos).normalize();
+        let speed = ball_velocity.0.length();
+        ball_velocity.0 = dir * speed;
     }
-    let paddle_pos = Vec2 {
-        x: paddle_position.0.x,
-        y: paddle_position.0.y + paddle_collider.half_size().y - paddle_collider.half_size().x,
-    };
-    let dir = (ball_position.0 - paddle_pos).normalize();
-    let speed = ball_velocity.0.length();
-    ball_velocity.0 = dir * speed;
+    ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
 }
