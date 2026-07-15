@@ -4,15 +4,16 @@ use super::{GameState, GameSystemSet};
 use crate::AppState;
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(FixedUpdate, move_entities.in_set(GameSystemSet::Movement));
     app.add_systems(
         OnEnter(AppState::MainMenu),
         project_positions.in_set(GameSystemSet::Display),
     )
     .add_systems(
         FixedUpdate,
-        project_positions
-            .in_set(GameSystemSet::Display)
+        (
+            move_entities.in_set(GameSystemSet::Movement),
+            project_positions.in_set(GameSystemSet::Display),
+        )
             .run_if(in_state(GameState::Running)),
     );
 }
