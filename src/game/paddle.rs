@@ -1,11 +1,10 @@
-use bevy::math::bounding::Aabb2d;
+use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::prelude::*;
 
 use super::GameState;
 use super::GameSystemSet;
 use super::ball::{Ball, BallCollision, LaunchRequested};
 use super::blocks::Gutter;
-use super::collision;
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
 
@@ -67,6 +66,7 @@ fn handle_player_input(
     }
 }
 
+// TODO: Rely on absolute coodinates instead of collision detection
 fn constrain_paddle_position(
     paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>, Without<Ball>)>,
     gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>, Without<Ball>)>,
@@ -76,20 +76,18 @@ fn constrain_paddle_position(
         let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
         let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
 
-        if let Some(collision) = collision::collide_with_side(paddle_aabb, gutter_aabb) {
-            match collision {
-                collision::Collision::Left => {
-                    paddle_position.0.x = gutter_position.0.x
-                        - gutter_collider.half_size().x
-                        - paddle_collider.half_size().x;
-                }
-                collision::Collision::Right => {
-                    paddle_position.0.x = gutter_position.0.x
-                        + gutter_collider.half_size().x
-                        + paddle_collider.half_size().x;
-                }
-                _ => {}
-            }
+        if !paddle_aabb.intersects(&gutter_aabb) {
+            continue;
+        }
+
+        let closest_point = gutter_aabb.closest_point(paddle_aabb.center());
+        let offset = paddle_aabb.center() - closest_point;
+        let width_sum = paddle_collider.half_size().x + gutter_collider.half_size().x;
+
+        if offset.x < 0. {
+            paddle_position.0.x = gutter_position.0.x - width_sum;
+        } else {
+            paddle_position.0.x = gutter_position.0.x + width_sum;
         }
     }
 }

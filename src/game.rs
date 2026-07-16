@@ -1,6 +1,5 @@
 mod ball;
 mod blocks;
-mod collision;
 mod game_over;
 mod game_pause;
 mod hud;
