@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use super::Score;
 use super::ball::{BALL_SPEED, Ball, BallCollision, BallMoved};
-use super::collision;
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
 
@@ -33,16 +32,15 @@ fn collide_gutter(
     event: On<BallCollision>,
     mut commands: Commands,
     ball: Single<(&mut Position, &mut Velocity), With<Ball>>,
+    gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Ball>)>,
 ) {
     let (mut ball_position, mut ball_velocity) = ball.into_inner();
-    match event.side {
-        collision::Collision::Left | collision::Collision::Right => {
-            ball_velocity.0.x *= -1.;
-        }
-        collision::Collision::Top | collision::Collision::Bottom => {
-            ball_velocity.0.y *= -1.;
-        }
-    }
+    let (gutter_pos, collider) = gutters
+        .get(event.entity)
+        .expect("Gutter entity should exist when colliding with it");
+
+    let normal = get_collision_normal(event.pos, gutter_pos.0, collider.0);
+    ball_velocity.0 = ball_velocity.0.reflect(normal);
     ball_position.0 = event.pos + ball_velocity.0.normalize() * event.remaining_distance;
     commands.trigger(BallMoved {
         from: event.pos,

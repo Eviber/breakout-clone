@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use super::GameState;
 use super::GameSystemSet;
 use super::Lives;
-use super::collision;
 use super::paddle::{PADDLE_Y, Paddle};
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
@@ -31,7 +30,6 @@ pub fn plugin(app: &mut App) {
 #[derive(EntityEvent)]
 pub struct BallCollision {
     pub entity: Entity,
-    pub side: collision::Collision,
     pub pos: Vec2,
     pub remaining_distance: f32,
 }
@@ -136,21 +134,6 @@ fn handle_collisions(
 
         if let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) {
             let collision_point = old_pos + dir * dist;
-            let collision = if other_collider.min.x < collision_point.x
-                && collision_point.x < other_collider.max.x
-            {
-                if other_collider.min.y < collision_point.y {
-                    collision::Collision::Top
-                } else {
-                    collision::Collision::Bottom
-                }
-            } else {
-                if other_collider.min.x < collision_point.x {
-                    collision::Collision::Right
-                } else {
-                    collision::Collision::Left
-                }
-            };
 
             if closest_collision
                 .as_ref()
@@ -158,11 +141,10 @@ fn handle_collisions(
             {
                 closest_collision = Some(BallCollision {
                     entity,
-                    side: collision,
                     pos: collision_point,
                     remaining_distance: speed - dist,
                 });
-            };
+            }
         }
     }
     if let Some(collision) = closest_collision {
