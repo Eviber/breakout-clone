@@ -119,6 +119,7 @@ fn handle_collisions(
     let dir = Dir2::new(ball_position.0 - old_pos).unwrap();
     let speed = (ball_position.0 - old_pos).length();
     let ray_cast = RayCast2d::new(old_pos, dir, speed);
+    let epsilon_ray_cast = RayCast2d::new(old_pos + dir * 0.001, dir, speed - 0.001);
 
     let mut closest_collision: Option<BallCollision> = None;
 
@@ -134,6 +135,13 @@ fn handle_collisions(
 
         if let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) {
             let collision_point = old_pos + dir * dist;
+            if dist <= 0.
+                && epsilon_ray_cast
+                    .aabb_intersection_at(&other_collider)
+                    .is_none_or(|d| d > 0.)
+            {
+                continue;
+            }
 
             if closest_collision
                 .as_ref()
