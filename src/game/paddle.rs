@@ -50,15 +50,21 @@ impl Paddle {
 fn handle_player_input(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+    paddle: Single<(&mut Velocity, &Position), With<Paddle>>,
 ) {
-    if keyboard_input.pressed(KeyCode::ArrowLeft) {
-        paddle_velocity.0.x = -PADDLE_SPEED;
-    } else if keyboard_input.pressed(KeyCode::ArrowRight) {
-        paddle_velocity.0.x = PADDLE_SPEED;
-    } else {
-        paddle_velocity.0.x = 0.;
-    }
+    let (camera, camera_transform) = camera.into_inner();
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
+        return;
+    };
+    let cursor_position = ray.origin.truncate();
+    let (mut paddle_velocity, paddle_position) = paddle.into_inner();
+    let delta_x = cursor_position.x - paddle_position.0.x;
+    paddle_velocity.0.x = delta_x;
     if keyboard_input.pressed(KeyCode::ArrowUp) {
         commands.trigger(LaunchRequested {
             x_speed: paddle_velocity.0.x,
