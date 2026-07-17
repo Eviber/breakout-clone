@@ -25,7 +25,6 @@ pub struct Paddle;
 
 pub const PADDLE_SHAPE: Rectangle = Rectangle::new(150., 20.);
 pub const PADDLE_COLOR: Color = Color::srgb(0., 1., 0.);
-pub const PADDLE_SPEED: f32 = 5.;
 pub const PADDLE_Y: f32 = -300.;
 
 impl Paddle {
@@ -44,22 +43,28 @@ impl Paddle {
     }
 }
 
-// TODO: Add mouse input
 // TODO: Add vertical paddle movement
 // TODO: Add paddle inclination based on movement?
 fn handle_player_input(
     mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
+    mouse_button: Res<ButtonInput<MouseButton>>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+    paddle: Single<(&mut Velocity, &Position), With<Paddle>>,
 ) {
-    if keyboard_input.pressed(KeyCode::ArrowLeft) {
-        paddle_velocity.0.x = -PADDLE_SPEED;
-    } else if keyboard_input.pressed(KeyCode::ArrowRight) {
-        paddle_velocity.0.x = PADDLE_SPEED;
-    } else {
-        paddle_velocity.0.x = 0.;
-    }
-    if keyboard_input.pressed(KeyCode::ArrowUp) {
+    let (camera, camera_transform) = camera.into_inner();
+    let Some(cursor_position) = window.cursor_position() else {
+        return;
+    };
+    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
+        return;
+    };
+    let cursor_position = ray.origin.truncate();
+    let (mut paddle_velocity, paddle_position) = paddle.into_inner();
+    let delta_x = cursor_position.x - paddle_position.0.x;
+    paddle_velocity.0.x = delta_x;
+    if mouse_button.just_pressed(MouseButton::Left) {
+        info!("Launching ball with x speed: {}", paddle_velocity.0.x);
         commands.trigger(LaunchRequested {
             x_speed: paddle_velocity.0.x,
         });

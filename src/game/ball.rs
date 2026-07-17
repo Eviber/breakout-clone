@@ -71,19 +71,16 @@ pub struct LaunchRequested {
 fn launch_ball(
     event: On<LaunchRequested>,
     mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
     ball: Single<Entity, (With<Ball>, Without<Velocity>)>,
 ) {
-    if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::ArrowUp) {
-        let mut ball_velocity = BALL_BASE_VELOCITY;
-        let angle = if event.x_speed < 0. {
-            45f32.to_radians()
-        } else {
-            -45f32.to_radians()
-        };
-        ball_velocity = Vec2::from_angle(angle).rotate(ball_velocity);
-        commands.entity(*ball).insert(Velocity(ball_velocity));
-    }
+    let mut ball_velocity = BALL_BASE_VELOCITY;
+    let angle = if event.x_speed < 0. {
+        45f32.to_radians()
+    } else {
+        -45f32.to_radians()
+    };
+    ball_velocity = Vec2::from_angle(angle).rotate(ball_velocity);
+    commands.entity(*ball).insert(Velocity(ball_velocity));
 }
 
 fn handle_lost_ball(
