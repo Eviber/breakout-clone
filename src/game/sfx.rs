@@ -1,74 +1,42 @@
-use std::time::Duration;
-
-use bevy::{
-    audio::{PlaybackMode, Volume},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use super::ball::BallCollision;
+use super::blocks::BrickDestroyed;
 
-const BEEP_LENGTH: f32 = 0.2;
-const BEEP_VOLUME: Volume = Volume::Linear(0.2);
-const ROOT_FREQ: f32 = 144. * 2.;
+// const BEEP_LENGTH: f32 = 0.2;
+// const BEEP_VOLUME: Volume = Volume::Linear(0.2);
+// const ROOT_FREQ: f32 = 144. * 2.;
 // const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
-const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
+// const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
 // TODO: Music
-// TODO: Brick breaking sound
 // TODO: Forbid repeating sounds?
 
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
-    app.add_systems(Update, fade_sounds);
+    app.add_observer(play_brick_destroyed_sound);
 }
 
-/// Eheheheh 😈
-fn rand64() -> u64 {
-    use std::hash::{BuildHasher, Hasher};
-    std::hash::RandomState::new().build_hasher().finish()
-}
-
-fn random_note() -> f32 {
-    let total_notes = PENTATONIC_SCALE.len() as u64;
-
-    let idx = rand64() % total_notes;
-
-    let semitone_offset = PENTATONIC_SCALE[idx as usize];
-
-    ROOT_FREQ * 2f32.powf(semitone_offset as f32 / 12.0)
-}
-
-fn play_hit_sound(_event: On<BallCollision>, mut commands: Commands) {
-    let pitch = random_note();
-    commands.spawn_scene(bsn! {
-        AudioPlayer<Pitch>(asset_value(Pitch::new(
-            pitch,
-            Duration::from_secs_f32(BEEP_LENGTH),
-        )))
-        PlaybackSettings {
-            mode: PlaybackMode::Despawn,
-            volume: Volume::SILENT,
-        }
-        Fade
-    });
-}
-
-#[derive(Component, Clone, Copy, Default)]
-struct Fade(f32);
-
-fn fade_sounds(
+// TODO: Shift pitch on combo
+fn play_brick_destroyed_sound(
+    _event: On<BrickDestroyed>,
     mut commands: Commands,
-    mut audio_sink: Query<(&mut AudioSink, &mut Fade, Entity)>,
-    time: Res<Time>,
+    asset_server: Res<AssetServer>,
 ) {
-    for (mut audio, mut fade, entity) in audio_sink.iter_mut() {
-        fade.0 += time.delta_secs_f64() as f32;
-        // f(x) = -4/(k^(2)) x (x-k)
-        let lerper = -4. / (BEEP_LENGTH * BEEP_LENGTH) * fade.0 * (fade.0 - BEEP_LENGTH);
-        audio.set_volume(Volume::SILENT.fade_towards(BEEP_VOLUME, lerper));
-        if time.delta().as_secs_f32() >= BEEP_LENGTH {
-            audio.set_volume(Volume::Linear(0.0));
-            commands.entity(entity).despawn();
-        }
-    }
+    let audio = asset_server.load("brickbreak.wav");
+
+    commands.spawn((AudioPlayer::new(audio), PlaybackSettings::DESPAWN));
+}
+
+fn play_hit_sound(
+    _event: On<BallCollision>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let audio = asset_server.load("pop.wav");
+
+    commands.spawn((
+        AudioPlayer::new(audio),
+        PlaybackSettings::DESPAWN,
+    ));
 }

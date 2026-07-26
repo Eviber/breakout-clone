@@ -77,7 +77,6 @@ pub fn brick(x: f32, y: f32) -> impl Scene {
 }
 
 // TODO: Add combo mechanic? Do the paddle resets the combo, or only losing a life?
-// TODO: Add brick destruction sfx
 // TODO: Add brick destruction vfx (particles, screen shake, etc.)
 fn destroy_brick(
     event: On<BrickDestroyed>,
