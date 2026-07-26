@@ -5,6 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
+    bevy_cli.url = "github:TheBevyFlock/bevy_cli";
   };
 
   outputs =
@@ -12,6 +13,7 @@
       nixpkgs,
       rust-overlay,
       flake-utils,
+      bevy_cli,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -34,6 +36,7 @@
                 # Rust dependencies
                 rustToolchain
                 pkg-config
+                bevy_cli.packages.${system}.default
               ]
               ++ lib.optionals (lib.strings.hasInfix "linux" system) [
                 # for Linux
