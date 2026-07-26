@@ -7,7 +7,7 @@ use bevy::{
 
 use super::ball::BallCollision;
 
-const BEEP_LENGTH: f32 = 0.1;
+const BEEP_LENGTH: f32 = 0.2;
 const BEEP_VOLUME: Volume = Volume::Linear(0.2);
 const ROOT_FREQ: f32 = 144. * 2.;
 // const SCALE: [i32; 7] = [0, 2, 4, 5, 7, 9, 11];
