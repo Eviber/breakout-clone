@@ -5,6 +5,8 @@ use super::ball::{BALL_SPEED, Ball, BallCollision, BallMoved};
 use super::physics::{Collider, Position, Velocity};
 use crate::AppState;
 
+use super::GameState;
+
 pub fn plugin(app: &mut App) {
     app.add_observer(destroy_brick);
 }
@@ -77,10 +79,15 @@ pub fn brick(x: f32, y: f32) -> impl Scene {
 // TODO: Add combo mechanic? Do the paddle resets the combo, or only losing a life?
 // TODO: Add brick destruction sfx
 // TODO: Add brick destruction vfx (particles, screen shake, etc.)
-// TODO: Add brick destruction freeze frame
-fn destroy_brick(event: On<BrickDestroyed>, mut commands: Commands, mut score: ResMut<Score>) {
+fn destroy_brick(
+    event: On<BrickDestroyed>,
+    mut commands: Commands,
+    mut score: ResMut<Score>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
     commands.entity(event.entity).despawn();
     score.0 += 10;
+    next_state.set(GameState::Frozen);
 }
 
 // TODO: Replace the Collision struct with this function
