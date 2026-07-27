@@ -1,3 +1,4 @@
+use bevy::audio::Volume;
 use bevy::prelude::*;
 
 use super::ball::BallCollision;
@@ -37,6 +38,6 @@ fn play_hit_sound(
 
     commands.spawn((
         AudioPlayer::new(audio),
-        PlaybackSettings::DESPAWN,
+        PlaybackSettings::DESPAWN.with_volume(Volume::Linear(0.2)),
     ));
 }
