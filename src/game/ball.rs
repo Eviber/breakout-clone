@@ -105,6 +105,7 @@ fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity
 }
 
 // TODO: Implement real corner collision detection, instead of just inflating the collider.
+// FIXME: There are still collision bugs
 fn handle_collisions(
     event: On<BallMoved>,
     mut commands: Commands,
