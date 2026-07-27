@@ -11,7 +11,6 @@ use super::blocks::BrickDestroyed;
 // const PENTATONIC_SCALE: [i32; 6] = [0, 2, 4, 7, 9, 12];
 
 // TODO: Music
-// TODO: Forbid repeating sounds?
 
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
@@ -34,15 +33,26 @@ fn play_brick_destroyed_sound(
     ));
 }
 
+/// Eheheheh 😈
+fn rand64() -> u64 {
+    use std::hash::{BuildHasher, Hasher};
+    std::hash::RandomState::new().build_hasher().finish()
+}
+
 fn play_hit_sound(
     _event: On<BallCollision>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
     let audio = asset_server.load("pop.wav");
+    let note = rand64() % 11;
+    let note = note as i64 - 5;
+    let note = note as f32 * 0.1 + 1.0;
 
     commands.spawn((
         AudioPlayer::new(audio),
-        PlaybackSettings::DESPAWN.with_volume(Volume::Linear(0.2)),
+        PlaybackSettings::DESPAWN
+            .with_volume(Volume::Linear(0.2))
+            .with_speed(note),
     ));
 }
