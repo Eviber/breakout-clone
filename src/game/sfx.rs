@@ -18,15 +18,20 @@ pub fn plugin(app: &mut App) {
     app.add_observer(play_brick_destroyed_sound);
 }
 
-// TODO: Shift pitch on combo
 fn play_brick_destroyed_sound(
     _event: On<BrickDestroyed>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    speed: Single<&super::physics::Velocity, With<super::ball::Ball>>,
 ) {
     let audio = asset_server.load("brickbreak.wav");
+    let speed = speed.0.length() - super::ball::BALL_BASE_VELOCITY.length();
 
-    commands.spawn((AudioPlayer::new(audio), PlaybackSettings::DESPAWN));
+    let note = 1.0595_f32.powf(speed);
+    commands.spawn((
+        AudioPlayer::new(audio),
+        PlaybackSettings::DESPAWN.with_speed(note),
+    ));
 }
 
 fn play_hit_sound(
