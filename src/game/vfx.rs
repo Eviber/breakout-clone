@@ -4,6 +4,8 @@ use bevy::prelude::*;
 
 use super::GameState;
 
+// TODO: Effect when paddle hit with effect?
+
 const FRAME_FREEZE: f32 = 0.0;
 
 pub fn plugin(app: &mut App) {
