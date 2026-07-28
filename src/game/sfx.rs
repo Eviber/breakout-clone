@@ -15,6 +15,7 @@ use super::blocks::BrickDestroyed;
 pub fn plugin(app: &mut App) {
     app.add_observer(play_hit_sound);
     app.add_observer(play_brick_destroyed_sound);
+    app.add_systems(OnEnter(super::GameState::GameOver), play_game_over_sound);
 }
 
 fn play_brick_destroyed_sound(
@@ -54,5 +55,21 @@ fn play_hit_sound(
         PlaybackSettings::DESPAWN
             .with_volume(Volume::Linear(0.2))
             .with_speed(note),
+    ));
+}
+
+fn play_game_over_sound(
+    mut commands: Commands,
+    lives: Res<super::Lives>,
+    asset_server: Res<AssetServer>,
+) {
+    let file = if lives.0 > 0 {
+        return; // "win.wav" // TODO: Add win sound
+    } else {
+        "lose.wav"
+    };
+    commands.spawn((
+        AudioPlayer::new(asset_server.load(file)),
+        PlaybackSettings::DESPAWN,
     ));
 }
