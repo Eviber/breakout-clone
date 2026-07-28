@@ -105,7 +105,6 @@ fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity
 }
 
 // TODO: Implement real corner collision detection, instead of just inflating the collider.
-// FIXME: There are still collision bugs
 fn handle_collisions(
     event: On<BallMoved>,
     mut commands: Commands,
@@ -143,7 +142,7 @@ fn handle_collisions(
 
             if closest_collision
                 .as_ref()
-                .is_none_or(|c| c.remaining_distance > speed - dist)
+                .is_none_or(|c| c.remaining_distance < speed - dist)
             {
                 closest_collision = Some(BallCollision {
                     entity,
