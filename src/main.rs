@@ -6,8 +6,8 @@
 mod game;
 mod main_menu;
 
-use bevy::{feathers::FeathersPlugins, prelude::*};
-// use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy::{feathers::FeathersPlugins, input::common_conditions::input_toggle_active, prelude::*};
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
 #[derive(States, Default, Debug, Hash, Eq, PartialEq, Clone)]
 pub enum AppState {
@@ -19,8 +19,10 @@ pub enum AppState {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, FeathersPlugins))
-        // .add_plugins(EguiPlugin::default())
-        // .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(EguiPlugin::default())
+        .add_plugins(
+            WorldInspectorPlugin::new().run_if(input_toggle_active(false, KeyCode::Backquote)),
+        )
         .add_plugins(main_menu::plugin)
         .add_plugins(game::plugin)
         .init_state::<AppState>()
