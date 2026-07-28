@@ -130,26 +130,27 @@ fn handle_collisions(
         let other_collider = Rectangle::new(w, h);
         let other_collider = Aabb2d::new(other_position.0, other_collider.half_size);
 
-        if let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) {
-            let collision_point = old_pos + dir * dist;
-            if dist <= 0.
-                && epsilon_ray_cast
-                    .aabb_intersection_at(&other_collider)
-                    .is_none_or(|d| d > 0.)
-            {
-                continue;
-            }
+        let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) else {
+            continue;
+        };
+        let collision_point = old_pos + dir * dist;
+        if dist <= 0.
+            && epsilon_ray_cast
+                .aabb_intersection_at(&other_collider)
+                .is_none_or(|d| d > 0.)
+        {
+            continue;
+        }
 
-            if closest_collision
-                .as_ref()
-                .is_none_or(|c| c.remaining_distance < speed - dist)
-            {
-                closest_collision = Some(BallCollision {
-                    entity,
-                    pos: collision_point,
-                    remaining_distance: speed - dist,
-                });
-            }
+        if closest_collision
+            .as_ref()
+            .is_none_or(|c| c.remaining_distance < speed - dist)
+        {
+            closest_collision = Some(BallCollision {
+                entity,
+                pos: collision_point,
+                remaining_distance: speed - dist,
+            });
         }
     }
     if let Some(collision) = closest_collision {
