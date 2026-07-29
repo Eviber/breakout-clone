@@ -63,11 +63,7 @@ fn play_game_over_sound(
     lives: Res<super::Lives>,
     asset_server: Res<AssetServer>,
 ) {
-    let file = if lives.0 > 0 {
-        return; // "win.wav" // TODO: Add win sound
-    } else {
-        "lose.wav"
-    };
+    let file = if lives.0 > 0 { "win.wav" } else { "lose.wav" };
     commands.spawn((
         AudioPlayer::new(asset_server.load(file)),
         PlaybackSettings::DESPAWN,
