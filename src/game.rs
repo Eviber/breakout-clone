@@ -122,7 +122,15 @@ fn grab_mouse(mut cursor_options: Single<&mut CursorOptions, With<Window>>) {
     cursor_options.grab_mode = CursorGrabMode::Locked;
 }
 
-fn free_mouse(mut cursor_options: Single<&mut CursorOptions, With<Window>>) {
+fn free_mouse(
+    mut cursor_options: Single<&mut CursorOptions, With<Window>>,
+    state: Res<State<GameState>>,
+) {
+    // Yeah that's ugly I know.
+    // Probably should make a separate (sub)state for Frozen, maybe later.
+    if state.get() == &GameState::Frozen {
+        return;
+    }
     cursor_options.visible = true;
     cursor_options.grab_mode = CursorGrabMode::None;
 }
