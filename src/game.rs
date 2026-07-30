@@ -42,6 +42,8 @@ struct Lives(usize);
 #[derive(Resource)]
 struct Score(u32);
 
+// TODO: Handle window size changes
+
 pub fn plugin(app: &mut App) {
     app.edit_schedule(FixedUpdate, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
