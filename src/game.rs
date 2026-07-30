@@ -11,6 +11,7 @@ mod vfx;
 
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::prelude::*;
+use bevy::window::{CursorGrabMode, CursorOptions};
 
 use crate::AppState;
 use blocks::Brick;
@@ -95,7 +96,9 @@ pub fn plugin(app: &mut App) {
                     .in_set(GameSystemSet::PostCollision),
             )
                 .run_if(in_state(GameState::Running)),
-        );
+        )
+        .add_systems(OnEnter(GameState::Running), grab_mouse)
+        .add_systems(OnExit(GameState::Running), free_mouse);
 }
 
 fn check_pause(input: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
@@ -112,4 +115,14 @@ fn check_out_of_lives(mut next_state: ResMut<NextState<GameState>>, lives: Res<L
 
 fn set_win_state(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::GameOver);
+}
+
+fn grab_mouse(mut cursor_options: Single<&mut CursorOptions, With<Window>>) {
+    cursor_options.visible = false;
+    cursor_options.grab_mode = CursorGrabMode::Locked;
+}
+
+fn free_mouse(mut cursor_options: Single<&mut CursorOptions, With<Window>>) {
+    cursor_options.visible = true;
+    cursor_options.grab_mode = CursorGrabMode::None;
 }

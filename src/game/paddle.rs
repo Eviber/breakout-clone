@@ -1,3 +1,4 @@
+use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
 use bevy::prelude::*;
 
@@ -48,21 +49,10 @@ impl Paddle {
 fn handle_player_input(
     mut commands: Commands,
     mouse_button: Res<ButtonInput<MouseButton>>,
-    window: Single<&Window>,
-    camera: Single<(&Camera, &GlobalTransform)>,
-    paddle: Single<(&mut Velocity, &Position), With<Paddle>>,
+    mouse_motion: Res<AccumulatedMouseMotion>,
+    mut paddle_velocity: Single<&mut Velocity, With<Paddle>>,
 ) {
-    let (camera, camera_transform) = camera.into_inner();
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
-    let cursor_position = ray.origin.truncate();
-    let (mut paddle_velocity, paddle_position) = paddle.into_inner();
-    let delta_x = cursor_position.x - paddle_position.0.x;
-    paddle_velocity.0.x = delta_x;
+    paddle_velocity.0.x = mouse_motion.delta.x;
     if mouse_button.just_pressed(MouseButton::Left) {
         info!("Launching ball with x speed: {}", paddle_velocity.0.x);
         commands.trigger(LaunchRequested {
