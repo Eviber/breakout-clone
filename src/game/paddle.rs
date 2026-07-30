@@ -1,5 +1,5 @@
 use bevy::input::mouse::AccumulatedMouseMotion;
-use bevy::math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume};
+use bevy::math::bounding::{Aabb2d, AabbCast2d};
 use bevy::prelude::*;
 
 use super::GameState;
@@ -61,29 +61,37 @@ fn handle_player_input(
     }
 }
 
-// TODO: Rely on absolute coodinates instead of collision detection
 fn constrain_paddle_position(
-    paddles: Single<(&mut Position, &Collider), (With<Paddle>, Without<Gutter>, Without<Ball>)>,
+    paddles: Single<
+        (&mut Position, &Velocity, &Collider),
+        (With<Paddle>, Without<Gutter>, Without<Ball>),
+    >,
     gutters: Query<(&Position, &Collider), (With<Gutter>, Without<Paddle>, Without<Ball>)>,
 ) {
-    let (mut paddle_position, paddle_collider) = paddles.into_inner();
+    let (mut paddle_position, paddle_velocity, paddle_collider) = paddles.into_inner();
+    let previous_pos = paddle_position.0 - paddle_velocity.0;
+    let Ok(dir) = Dir2::new(paddle_position.0 - previous_pos) else {
+        return;
+    };
+    let speed = (paddle_position.0 - previous_pos).length();
+    let paddle_aabb = Aabb2d::new(Vec2::ZERO, paddle_collider.half_size());
+    let paddle_cast = AabbCast2d::new(paddle_aabb, previous_pos, dir, speed);
+    let epsilon_pos = previous_pos + dir * 0.001;
+    let epsilon_speed = speed - 0.001;
+    let epsilon_paddle_cast = AabbCast2d::new(paddle_aabb, epsilon_pos, dir, epsilon_speed);
+
     for (gutter_position, gutter_collider) in &gutters {
-        let paddle_aabb = Aabb2d::new(paddle_position.0, paddle_collider.half_size());
         let gutter_aabb = Aabb2d::new(gutter_position.0, gutter_collider.half_size());
 
-        if !paddle_aabb.intersects(&gutter_aabb) {
+        let Some(dist) = paddle_cast.aabb_collision_at(gutter_aabb) else {
+            continue;
+        };
+        let epsilon_collision = epsilon_paddle_cast.aabb_collision_at(gutter_aabb);
+        if dist <= 0. && epsilon_collision.is_none_or(|d| d > 0.) {
             continue;
         }
 
-        let closest_point = gutter_aabb.closest_point(paddle_aabb.center());
-        let offset = paddle_aabb.center() - closest_point;
-        let width_sum = paddle_collider.half_size().x + gutter_collider.half_size().x;
-
-        if offset.x < 0. {
-            paddle_position.0.x = gutter_position.0.x - width_sum;
-        } else {
-            paddle_position.0.x = gutter_position.0.x + width_sum;
-        }
+        paddle_position.0.x = previous_pos.x + (dist * paddle_velocity.0.x.signum());
     }
 }
 

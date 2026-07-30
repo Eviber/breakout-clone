@@ -89,7 +89,6 @@ fn destroy_brick(
     next_state.set(GameState::Frozen);
 }
 
-// TODO: Replace the Collision struct with this function
 fn get_collision_normal(pos: Vec2, rect_pos: Vec2, rect: Rectangle) -> Vec2 {
     let aabb = bevy::math::bounding::Aabb2d::new(rect_pos, rect.half_size);
     // Edge
