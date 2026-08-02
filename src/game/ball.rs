@@ -116,7 +116,6 @@ fn handle_collisions(
     let dir = Dir2::new(ball_position.0 - old_pos).unwrap();
     let speed = (ball_position.0 - old_pos).length();
     let ray_cast = RayCast2d::new(old_pos, dir, speed);
-    let epsilon_ray_cast = RayCast2d::new(old_pos + dir * 0.001, dir, speed - 0.001);
 
     let mut closest_collision: Option<BallCollision> = None;
 
@@ -125,23 +124,13 @@ fn handle_collisions(
             // Do not collide with the entity we just collided with.
             continue;
         }
-        let w = (other_collider.0.half_size.x + BALL_SIZE) * 2.;
-        let h = (other_collider.0.half_size.y + BALL_SIZE) * 2.;
-        let other_collider = Rectangle::new(w, h);
-        let other_collider = Aabb2d::new(other_position.0, other_collider.half_size);
 
-        let Some(dist) = ray_cast.aabb_intersection_at(&other_collider) else {
+        let dist = ball_to_collider_collision(&ray_cast, other_position, other_collider);
+        let Some(dist) = dist else {
             continue;
         };
-        let collision_point = old_pos + dir * dist;
-        if dist <= 0.
-            && epsilon_ray_cast
-                .aabb_intersection_at(&other_collider)
-                .is_none_or(|d| d > 0.)
-        {
-            continue;
-        }
 
+        let collision_point = old_pos + dir * dist;
         if closest_collision
             .as_ref()
             .is_none_or(|c| c.remaining_distance < speed - dist)
@@ -156,6 +145,36 @@ fn handle_collisions(
     if let Some(collision) = closest_collision {
         commands.trigger(collision);
     }
+}
+
+fn ball_to_collider_collision(
+    ray_cast: &RayCast2d,
+    position: &Position,
+    collider: &Collider,
+) -> Option<f32> {
+    let expanded_hw = collider.half_size().x + BALL_SIZE;
+    let expanded_hh = collider.half_size().y + BALL_SIZE;
+    let collider = aabb_from_half(position, expanded_hw, expanded_hh);
+    let dist = ray_cast.aabb_intersection_at(&collider)?;
+    if dist > 0. {
+        return Some(dist);
+    }
+    // Only collide if there's a collision at 0.0 with epsilon too
+    let e_ray_cast = epsilon_ray_cast(ray_cast);
+    let e_dist = e_ray_cast.aabb_intersection_at(&collider)?;
+    (e_dist <= 0.).then_some(dist)
+}
+
+fn aabb_from_half(position: &Position, hw: f32, hh: f32) -> Aabb2d {
+    let half_size = Vec2::new(hw, hh);
+    Aabb2d::new(position.0, half_size)
+}
+
+fn epsilon_ray_cast(ray_cast: &RayCast2d) -> RayCast2d {
+    let e_origin = ray_cast.ray.origin + ray_cast.ray.direction * 0.001;
+    let e_dir = ray_cast.ray.direction;
+    let e_len = ray_cast.max - 0.001;
+    RayCast2d::new(e_origin, e_dir, e_len)
 }
 
 fn move_locked_ball(
