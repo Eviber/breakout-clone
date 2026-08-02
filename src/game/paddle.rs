@@ -95,6 +95,7 @@ fn constrain_paddle_position(
     }
 }
 
+// TODO: Transfer paddle velocity to ball
 fn collide_paddle(
     event: On<BallCollision>,
     mut commands: Commands,

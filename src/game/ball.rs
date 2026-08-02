@@ -104,6 +104,7 @@ fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity
     });
 }
 
+// TODO: Better collision handling with moving collider
 fn handle_collisions(
     event: On<BallMoved>,
     mut commands: Commands,
