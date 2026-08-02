@@ -1,4 +1,5 @@
 use bevy::math::bounding::Aabb2d;
+use bevy::math::bounding::BoundingCircle;
 use bevy::math::bounding::RayCast2d;
 use bevy::prelude::*;
 
@@ -104,7 +105,6 @@ fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity
     });
 }
 
-// TODO: Implement real corner collision detection, instead of just inflating the collider.
 fn handle_collisions(
     event: On<BallMoved>,
     mut commands: Commands,
@@ -152,16 +152,73 @@ fn ball_to_collider_collision(
     position: &Position,
     collider: &Collider,
 ) -> Option<f32> {
+    let e_ray_cast = epsilon_ray_cast(ray_cast);
+
     let expanded_hw = collider.half_size().x + BALL_SIZE;
     let expanded_hh = collider.half_size().y + BALL_SIZE;
-    let collider = aabb_from_half(position, expanded_hw, expanded_hh);
-    let dist = ray_cast.aabb_intersection_at(&collider)?;
+
+    let mut collisions = Vec::new();
+
+    let aabb = aabb_from_half(position, collider.half_size().x, expanded_hh);
+    if let Some(dist) = aabb_epsilon_collision(ray_cast, &e_ray_cast, &aabb) {
+        collisions.push(dist);
+    }
+    let aabb = aabb_from_half(position, expanded_hw, collider.half_size().y);
+    if let Some(dist) = aabb_epsilon_collision(ray_cast, &e_ray_cast, &aabb) {
+        collisions.push(dist);
+    }
+
+    let aabb = aabb_from_half(position, collider.half_size().x, collider.half_size().y);
+    let center = aabb.min;
+    let bc = BoundingCircle::new(center, BALL_SIZE);
+    if let Some(dist) = bc_epsilon_collision(ray_cast, &e_ray_cast, &bc) {
+        collisions.push(dist);
+    }
+    let center = Vec2::new(aabb.min.x, aabb.max.y);
+    let bc = BoundingCircle::new(center, BALL_SIZE);
+    if let Some(dist) = bc_epsilon_collision(ray_cast, &e_ray_cast, &bc) {
+        collisions.push(dist);
+    }
+    let center = Vec2::new(aabb.max.x, aabb.min.y);
+    let bc = BoundingCircle::new(center, BALL_SIZE);
+    if let Some(dist) = bc_epsilon_collision(ray_cast, &e_ray_cast, &bc) {
+        collisions.push(dist);
+    }
+    let center = aabb.max;
+    let bc = BoundingCircle::new(center, BALL_SIZE);
+    if let Some(dist) = bc_epsilon_collision(ray_cast, &e_ray_cast, &bc) {
+        collisions.push(dist);
+    }
+
+    let dist = collisions.into_iter().min_by(|a, b| a.total_cmp(b))?;
+    Some(dist)
+}
+
+fn bc_epsilon_collision(
+    ray_cast: &RayCast2d,
+    e_ray_cast: &RayCast2d,
+    bc: &BoundingCircle,
+) -> Option<f32> {
+    let dist = ray_cast.circle_intersection_at(bc)?;
     if dist > 0. {
         return Some(dist);
     }
     // Only collide if there's a collision at 0.0 with epsilon too
-    let e_ray_cast = epsilon_ray_cast(ray_cast);
-    let e_dist = e_ray_cast.aabb_intersection_at(&collider)?;
+    let e_dist = e_ray_cast.circle_intersection_at(bc)?;
+    (e_dist <= 0.).then_some(dist)
+}
+
+fn aabb_epsilon_collision(
+    ray_cast: &RayCast2d,
+    e_ray_cast: &RayCast2d,
+    collider: &Aabb2d,
+) -> Option<f32> {
+    let dist = ray_cast.aabb_intersection_at(collider)?;
+    if dist > 0. {
+        return Some(dist);
+    }
+    // Only collide if there's a collision at 0.0 with epsilon too
+    let e_dist = e_ray_cast.aabb_intersection_at(collider)?;
     (e_dist <= 0.).then_some(dist)
 }
 
