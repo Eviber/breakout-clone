@@ -21,7 +21,7 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Clone, Default, Reflect)]
+#[derive(Component, Clone, Copy, Default, Reflect)]
 #[require(Transform)]
 pub struct Position(pub Vec2);
 

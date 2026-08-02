@@ -104,28 +104,41 @@ fn trigger_ball_moved(mut commands: Commands, ball: Single<(&Position, &Velocity
     });
 }
 
-// TODO: Better collision handling with moving collider
 fn handle_collisions(
     event: On<BallMoved>,
     mut commands: Commands,
     ball: Single<&Position, With<Ball>>,
-    other_things: Query<(&Position, &Collider, Entity), Without<Ball>>,
+    other_things: Query<(&Position, Option<&Velocity>, &Collider, Entity), Without<Ball>>,
 ) {
     let ball_position = ball.into_inner();
     let old_pos = event.from;
+    let ball_velocity = ball_position.0 - old_pos;
     let dir = Dir2::new(ball_position.0 - old_pos).unwrap();
     let speed = (ball_position.0 - old_pos).length();
     let ray_cast = RayCast2d::new(old_pos, dir, speed);
 
     let mut closest_collision: Option<BallCollision> = None;
 
-    for (other_position, other_collider, entity) in &other_things {
+    for (other_position, other_velocity, other_collider, entity) in &other_things {
         if event.rebound_from.is_some_and(|e| e == entity) {
             // Do not collide with the entity we just collided with.
             continue;
         }
 
-        let dist = ball_to_collider_collision(&ray_cast, other_position, other_collider);
+        let (ray_cast, other_position) = if let Some(other_velocity) = other_velocity {
+            let other_old_pos = Position(other_position.0 - other_velocity.0);
+            let relative_velocity = ball_velocity - other_velocity.0;
+            let Ok(dir) = Dir2::new(relative_velocity) else {
+                continue;
+            };
+            let speed = relative_velocity.length();
+            let ray_cast = RayCast2d::new(old_pos, dir, speed);
+            (ray_cast, other_old_pos)
+        } else {
+            (ray_cast.clone(), *other_position)
+        };
+
+        let dist = ball_to_collider_collision(&ray_cast, &other_position, other_collider);
         let Some(dist) = dist else {
             continue;
         };
